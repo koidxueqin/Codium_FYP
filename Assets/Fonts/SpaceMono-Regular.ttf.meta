@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 1369b894cf3e4a445ba1cd4aca034c95
+guid: 0ee14c5fa2675c64ba966bf7fa33f128
 TrueTypeFontImporter:
   externalObjects: {}
   serializedVersion: 4
@@ -9,7 +9,7 @@ TrueTypeFontImporter:
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Monday Feelings
+  - Space Mono
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0

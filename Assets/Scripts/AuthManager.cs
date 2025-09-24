@@ -67,14 +67,17 @@ public class AuthManager : MonoBehaviour
 
     async Task SignInFlow()
     {
-        // For SignIn we require: username, password
+        //require username and sign in for sign in
         var (ok, user, _, pass) = ValidateInputs(requireConfirm: false, requireEmail: false);
         if (!ok) return;
 
         await AuthenticationService.Instance.SignInWithUsernamePasswordAsync(user, pass);
         Log("SignIn successful. PlayerId: " + AuthenticationService.Instance.PlayerId);
 
-        // Auto change scene after successful login
+        //load character state
+        try { await PlayerCharacterStore.LoadAsync(); }
+        catch (System.Exception ex) { Debug.LogException(ex); Log("Loaded with defaults (offline?)"); }
+
         if (nextSceneOnLogin >= 0)
             ChangeScene(nextSceneOnLogin);
     }

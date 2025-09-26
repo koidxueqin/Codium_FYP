@@ -96,7 +96,7 @@ public class AuthManager : MonoBehaviour
 
         await AuthenticationService.Instance.UpdatePlayerNameAsync(user);
         Log("Player name set to: " + user);
-        // For linking, we usually KEEP the user signed in.
+        
     }
 
     // ---------- VALIDATION ----------

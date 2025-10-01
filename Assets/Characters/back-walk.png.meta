@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ed59c9311ff1c5b41a01295f44bbfa82
+guid: 8d622854857aa8743a5cfeec860f853c
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -110,7 +110,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: player-back_0
+      name: back-walk_0
       rect:
         serializedVersion: 2
         x: 0
@@ -124,14 +124,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 33fdb86442e69d142b3e28d6db7a72ec
-      internalID: -361988004
+      spriteID: ccacaa042c0626e4d92b81821a668105
+      internalID: -1153842178
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: player-back_1
+      name: back-walk_1
       rect:
         serializedVersion: 2
         x: 128
@@ -145,14 +145,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 3fcc802cedb95a947a72f4bff1e49b24
-      internalID: 1593050165
+      spriteID: d657b0e8832356c42a24b2ae48fe2eec
+      internalID: -261546025
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: player-back_2
+      name: back-walk_2
       rect:
         serializedVersion: 2
         x: 256
@@ -166,14 +166,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 28c267aa61f6a274bb0fa044fc2b02df
-      internalID: 1254843188
+      spriteID: e2af1da6f9c33104689421c2cf777198
+      internalID: -1493009429
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: player-back_3
+      name: back-walk_3
       rect:
         serializedVersion: 2
         x: 384
@@ -187,14 +187,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: b490f7a7594779148b2eb609b4ccbc8d
-      internalID: -1698049815
+      spriteID: 0a4f938583b55934cbf2a91f2d042ccc
+      internalID: -1237979290
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: player-back_4
+      name: back-walk_4
       rect:
         serializedVersion: 2
         x: 512
@@ -208,14 +208,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f127fd4c82539c04992f4e6c36273b35
-      internalID: 821318349
+      spriteID: 3cce0cd8008124f45b4741e1b7854b85
+      internalID: -557639987
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: player-back_5
+      name: back-walk_5
       rect:
         serializedVersion: 2
         x: 640
@@ -229,8 +229,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 0b3a8865475adf84cbfac5490f51a763
-      internalID: -378313576
+      spriteID: ff51c23abe1af2241921b27fcd42943b
+      internalID: -360482487
       vertices: []
       indices: 
       edges: []
@@ -246,12 +246,12 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      player-back_0: -361988004
-      player-back_1: 1593050165
-      player-back_2: 1254843188
-      player-back_3: -1698049815
-      player-back_4: 821318349
-      player-back_5: -378313576
+      back-walk_0: -1153842178
+      back-walk_1: -261546025
+      back-walk_2: -1493009429
+      back-walk_3: -1237979290
+      back-walk_4: -557639987
+      back-walk_5: -360482487
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

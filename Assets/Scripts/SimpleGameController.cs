@@ -7,6 +7,7 @@ using Unity.Services.CloudSave;
 using UnityEngine.UI;
 using Unity.Services.Core;
 using Unity.Services.Authentication;
+using Unity.Services.Leaderboards;
 
 [System.Serializable]
 public class Question
@@ -18,11 +19,17 @@ public class Question
     public string correct;                
     [TextArea] public string hint;      
     public string[] options = new string[3]; 
+
 }
+
+
 
 public class SimpleGameController : MonoBehaviour
 {
     public static SimpleGameController Instance { get; private set; }
+
+    [Header("Player")]
+    public PlayerMovement playerMovement;
 
     [Header("Scene References")]
     public DropSlot slot1;
@@ -86,6 +93,7 @@ public class SimpleGameController : MonoBehaviour
     void InitLevel()
     {
         ended = false;
+        playerMovement.isDead(false);
 
         playerLives = playerMaxLives;
         enemyLives = Mathf.Max(1, questions.Length);
@@ -162,12 +170,20 @@ public class SimpleGameController : MonoBehaviour
         ShowToast(string.IsNullOrWhiteSpace(Q.hint) ? "Try again!" : Q.hint);
 
         playerLives = Mathf.Max(0, playerLives - 1);
+        playerMovement.isHurt(true);
+        Invoke(nameof(stopHurt), 1);
+        
+
         if (playerHearts) playerHearts.SetLives(playerLives);
 
         if (slot1) slot1.ClearSlot();
 
         if (playerLives <= 0)
             EndGameOver();
+    }
+
+    void stopHurt() {
+        playerMovement.isHurt(false);
     }
 
     void EndQuestCleared()
@@ -198,9 +214,11 @@ public class SimpleGameController : MonoBehaviour
 
     void EndGameOver()
     {
+        playerMovement.isDead(true);
         ended = true;
         ShowToast("Game Over!");
         if (gameOverPanel) gameOverPanel.SetActive(true);
+
     }
 
     // Buttons

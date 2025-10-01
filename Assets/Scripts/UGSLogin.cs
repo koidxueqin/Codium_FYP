@@ -8,13 +8,25 @@ using Unity.Services.Authentication.PlayerAccounts;
 public class UGSLogin : MonoBehaviour
 {
     [Header("Navigation")]
-    [SerializeField] private int menuSceneIndex = 1; // set in Build Settings order
+    [SerializeField] private int menuSceneIndex = 1;     // set in Build Settings order
+    [SerializeField] private int startupSceneIndex = 0;  // where to go after logout
     private bool navigated;
 
     async void Awake()
     {
         await UnityServices.InitializeAsync();
-        PlayerAccountService.Instance.SignedIn += async () => { await SignInWithUnityAuth(); };
+        PlayerAccountService.Instance.SignedIn += OnPlayerAccountsSignedIn;
+    }
+
+    void OnDestroy()
+    {
+        // avoid multiple subscriptions if the object gets recreated
+        PlayerAccountService.Instance.SignedIn -= OnPlayerAccountsSignedIn;
+    }
+
+    private async void OnPlayerAccountsSignedIn()
+    {
+        await SignInWithUnityAuth();
     }
 
     public async void OnSignInButton()
@@ -44,7 +56,10 @@ public class UGSLogin : MonoBehaviour
                     OnSignedInNavigate();
                     return;
                 }
-                catch (AuthenticationException ex) when (ex.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked) { /* fall through */ }
+                catch (AuthenticationException ex) when (ex.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+                {
+                    // fall through to normal sign-in
+                }
             }
 
             await AuthenticationService.Instance.SignInWithUnityAsync(token);
@@ -69,10 +84,26 @@ public class UGSLogin : MonoBehaviour
         SceneManager.LoadScene(menuSceneIndex);
     }
 
+    // Hook this to your Logout button
     public void OnSignOutButton()
     {
-        AuthenticationService.Instance.SignOut();
-        PlayerAccountService.Instance.SignOut();
+        // Optional: force clearing the session token so next launch requires login again.
+        // If your SDK version supports the bool overload, use true:
+        try { AuthenticationService.Instance.SignOut(true); } catch { /* fallback if overload not available */ AuthenticationService.Instance.SignOut(); }
+        try { PlayerAccountService.Instance.SignOut(); } catch { }
+
         navigated = false;
+
+        int count = SceneManager.sceneCountInBuildSettings;
+        if (startupSceneIndex < 0 || startupSceneIndex >= count)
+        {
+            Debug.LogWarning($"startupSceneIndex {startupSceneIndex} is out of range (0..{count - 1}).");
+            return;
+        }
+
+        // Make sure timeScale is normal in case you paused anywhere
+        Time.timeScale = 1f;
+
+        SceneManager.LoadScene(startupSceneIndex);
     }
 }

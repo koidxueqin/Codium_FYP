@@ -28,6 +28,7 @@ public class DragToken : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
     public void OnBeginDrag(PointerEventData e)
     {
         originalParent = transform.parent;
+        sourceSlotBeforeDrag = originalParent ? originalParent.GetComponent<DropSlot>() : null;
         transform.SetParent(canvas.transform, true);
         cg.blocksRaycasts = false;
         cg.alpha = 0.9f;
@@ -61,4 +62,6 @@ public class DragToken : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         var img = GetComponent<Image>();
         if (img) img.raycastTarget = visible;
     }
+
+    public DropSlot sourceSlotBeforeDrag;
 }

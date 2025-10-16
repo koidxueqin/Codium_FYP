@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8040170631688320217}
   - component: {fileID: 5487820890563666416}
   - component: {fileID: 8772945086610577729}
-  - component: {fileID: 5192476589038306658}
+  - component: {fileID: 2366236790407393932}
   m_Layer: 5
   m_Name: Slot
   m_TagString: Untagged
@@ -60,7 +60,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.67058825, g: 0.39607844, b: 0.5058824, a: 1}
+  m_Color: {r: 0.7924528, g: 0.48967603, b: 0.63466775, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -77,7 +77,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &5192476589038306658
+--- !u!114 &2366236790407393932
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -90,7 +90,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   slotId: slot1
-  placedText: {fileID: 5713951270532755153}
+  placedText: {fileID: 0}
+  mode: 0
+  notifierBehaviour: {fileID: 0}
 --- !u!1 &7280620133210971166
 GameObject:
   m_ObjectHideFlags: 0
@@ -158,8 +160,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 2b4fb72f6978a5642bab78d40762f5e1, type: 2}
-  m_sharedMaterial: {fileID: 3800866003546785909, guid: 2b4fb72f6978a5642bab78d40762f5e1, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c58a55803a044c344b57a0a366f13288, type: 2}
+  m_sharedMaterial: {fileID: 9073542640485120094, guid: c58a55803a044c344b57a0a366f13288, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -183,8 +185,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

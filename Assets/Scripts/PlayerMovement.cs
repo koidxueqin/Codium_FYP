@@ -98,4 +98,8 @@ public class PlayerMovement : MonoBehaviour
     public void isHurt(bool hurt) {
         anim.SetBool("hurt", hurt);
     }
+
+
+  
+
 }

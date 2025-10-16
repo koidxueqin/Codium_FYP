@@ -17,7 +17,8 @@ public class Question
     public string prefix;                 
     public string suffix;                 
     public string correct;                
-    [TextArea] public string hint;      
+    [TextArea] public string hint;
+    [TextArea] public string explainCorrect;
     public string[] options = new string[3]; 
 
 }
@@ -28,8 +29,9 @@ public class SimpleGameController : MonoBehaviour
 {
     public static SimpleGameController Instance { get; private set; }
 
-    [Header("Player")]
+    [Header("Characters")]
     public PlayerMovement playerMovement;
+    public EnemyAnimator enemyAnimator;
 
     [Header("Scene References")]
     public DropSlot slot1;
@@ -85,9 +87,12 @@ public class SimpleGameController : MonoBehaviour
     void Start()
     {
         if (questions == null || questions.Length == 0)
-            questions = DefaultQuestions();
-
+        {
+            Debug.LogWarning("No questions set in the Inspector for SimpleGameController.");
+            return;
+        }
         InitLevel();
+
     }
 
     void InitLevel()
@@ -110,18 +115,25 @@ public class SimpleGameController : MonoBehaviour
     }
 
     void LoadQuestion()
-    {
-        HideToast();  // clear previous hint
-
+    { 
         qIndex = Mathf.Clamp(qIndex, 0, questions.Length - 1);
+
+        if (slot1) slot1.ClearSlot();
+        DestroyTokens();
 
         if (promptText) promptText.text = Q.prompt;
         if (contextLineText) contextLineText.text = string.IsNullOrEmpty(Q.contextLine) ? "" : Q.contextLine;
         if (prefixText) prefixText.text = Q.prefix;
         if (suffixText) suffixText.text = Q.suffix;
 
-        if (slot1) slot1.ClearSlot();
-        foreach (Transform c in tokensRow) Destroy(c.gameObject);
+        if (slot1)
+        {
+            slot1.ClearSlot();
+            
+        }
+
+        
+
         foreach (var t in Q.options)
         {
             var token = Instantiate(tokenPrefab, tokensRow);
@@ -133,9 +145,25 @@ public class SimpleGameController : MonoBehaviour
     public void NotifySlotFilled(string slotId, string tokenText, DragToken token)
     {
         if (ended) return;
-        if (tokenText == Q.correct) OnCorrect();
-        else OnWrong();
+
+        // identify the slot that actually received the drop
+        DropSlot droppedInto = null;
+        if (token && token.transform.parent)
+            droppedInto = token.transform.parent.GetComponent<DropSlot>();
+
+        if (tokenText == Q.correct)
+        {
+            OnCorrect();
+        }
+        else
+        {
+            // snap wrong token back immediately and free that slot
+            if (droppedInto) droppedInto.ClearSlot();
+            OnWrong();
+        }
     }
+
+
 
     void OnCorrect()
     {
@@ -144,25 +172,42 @@ public class SimpleGameController : MonoBehaviour
         enemyLives = Mathf.Max(0, enemyLives - 1);
         if (enemyHearts) enemyHearts.SetLives(enemyLives);
 
-        if (enemyLives <= 0)
+        if (enemyAnimator)
         {
-            ShowToast("Quest Cleared!");   // leave visible under the win panel
-            EndQuestCleared();
-            return;
+            enemyAnimator.Hurt(true);           // turn ON
+            Invoke(nameof(EnemyStopHurt), 0.6f); // use your clip length here
         }
 
+        string message = string.IsNullOrWhiteSpace(Q.explainCorrect) ? "Nice!" : Q.explainCorrect;
+        ShowToastTimed(message, 3f);
+
+        if (enemyLives <= 0) { ended = true; Invoke(nameof(EndQuestCleared), 3f); return; }
         qIndex++;
-        LoadQuestion();                    
-        ShowToastTimed("Nice!", 1.5f);     
+        Invoke(nameof(LoadQuestion), 3f);
     }
+
+    void EnemyStopHurt()
+    {
+        if (enemyAnimator) enemyAnimator.Hurt(false); // turn OFF
+    }
+
 
 
     void ShowToastTimed(string msg, float seconds)
     {
-        ShowToast(msg);               
+        ShowToast(msg);
         CancelInvoke(nameof(HideToast));
         Invoke(nameof(HideToast), seconds);
     }
+
+    void DestroyTokens()
+    {
+        
+        var tokens = FindObjectsOfType<DragToken>(true);
+        for (int i = 0; i < tokens.Length; i++)
+            Destroy(tokens[i].gameObject);
+    }
+
 
 
     void OnWrong()
@@ -175,16 +220,22 @@ public class SimpleGameController : MonoBehaviour
         
 
         if (playerHearts) playerHearts.SetLives(playerLives);
-
-        if (slot1) slot1.ClearSlot();
-
         if (playerLives <= 0)
-            EndGameOver();
+        {
+            ended = true;                
+            Invoke(nameof(EndGameOver), 3f);
+            return;
+        }
+
     }
 
-    void stopHurt() {
+    void stopHurt()
+    {
         playerMovement.isHurt(false);
     }
+
+
+
 
     void EndQuestCleared()
     {
@@ -216,8 +267,8 @@ public class SimpleGameController : MonoBehaviour
     {
         playerMovement.isDead(true);
         ended = true;
-        ShowToast("Game Over!");
         if (gameOverPanel) gameOverPanel.SetActive(true);
+
 
     }
 
@@ -253,40 +304,7 @@ public class SimpleGameController : MonoBehaviour
     }
 
 
-    // Defaults: 3 questions, increasing difficulty
-    Question[] DefaultQuestions()
-    {
-        return new[]
-        {
-            new Question {
-                prompt = "Print \"Hello\"",
-                contextLine = "",
-                prefix = "print(",
-                suffix = ")",
-                correct = "\"Hello\"",
-                hint = "Strings need quotes like \"Hello\".",
-                options = new[] { "Hello", "\"Hello\"", "hello" }
-            },
-            new Question {
-                prompt = "Pick the operator to make this True",
-                contextLine = "",
-                prefix = "5",
-                suffix = "3",
-                correct = ">",
-                hint = "5 is greater than 3, so use >.",
-                options = new[] { "<", "==", ">" }
-            },
-            new Question {
-                prompt = "Print the second item",
-                contextLine = "nums = [10, 20, 30]",
-                prefix = "print(nums[",
-                suffix = "])",
-                correct = "1",
-                hint = "Lists start at 0: 10@0, 20@1, 30@2.",
-                options = new[] { "2", "1", "3" }
-            }
-        };
-    }
+ 
 
     int ComputeStarsFromHearts()
     {
@@ -374,7 +392,7 @@ public class SimpleGameController : MonoBehaviour
         }
     }
 
-    async Task EnsureUgsReadyAsync()
+    async Task EnsureUgsReadyAsync()    
     {
         if (UnityServices.State != ServicesInitializationState.Initialized)
             await UnityServices.InitializeAsync();

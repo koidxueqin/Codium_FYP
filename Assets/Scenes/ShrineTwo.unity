@@ -777,7 +777,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Click Fast!
+  m_text: Click before the time runs out!
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 9095acbb698087243ab027f56185e800, type: 2}
   m_sharedMaterial: {fileID: -8159483825627098965, guid: 9095acbb698087243ab027f56185e800, type: 2}
@@ -940,6 +940,7 @@ GameObject:
   - component: {fileID: 313341784}
   - component: {fileID: 313341783}
   - component: {fileID: 313341785}
+  - component: {fileID: 313341786}
   m_Layer: 0
   m_Name: monster2
   m_TagString: Untagged
@@ -1024,7 +1025,7 @@ Animator:
   m_GameObject: {fileID: 313341782}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: b8a90bd075e2d944b9627dc5b812b871, type: 2}
+  m_Controller: {fileID: 9100000, guid: ec3e54a4c9c9e564e953754783750bc5, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -1035,6 +1036,19 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &313341786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 313341782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d30aa6a9b12cc149a8bd5e5855c935b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  anim: {fileID: 313341785}
 --- !u!1 &387350539
 GameObject:
   m_ObjectHideFlags: 0
@@ -3204,6 +3218,8 @@ GameObject:
   - component: {fileID: 780223692}
   - component: {fileID: 780223691}
   - component: {fileID: 780223690}
+  - component: {fileID: 780223694}
+  - component: {fileID: 780223693}
   m_Layer: 0
   m_Name: player
   m_TagString: Untagged
@@ -3299,6 +3315,48 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!50 &780223693
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780223689}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 7
+--- !u!114 &780223694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780223689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74a661e00c3e2ee4884781c3dcb90992, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSpeed: 5
+  rb: {fileID: 780223693}
+  anim: {fileID: 780223690}
 --- !u!1 &787723906
 GameObject:
   m_ObjectHideFlags: 0
@@ -4588,7 +4646,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 442329a0a8ead8346aeb24039b159a30, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerMovement: {fileID: 0}
+  playerMovement: {fileID: 780223694}
+  enemyAnimator: {fileID: 313341786}
   promptText: {fileID: 787723910}
   contextLineText: {fileID: 1032508165}
   forgedListContainer: {fileID: 1995363310}
@@ -4605,7 +4664,7 @@ MonoBehaviour:
   - {fileID: 1480920691}
   - {fileID: 560326676}
   - {fileID: 947413019}
-  stepTimeLimit: 15
+  stepTimeLimit: 30
   stepTimerFill: {fileID: 1784483715}
   playerHearts: {fileID: 1687249096}
   enemyHearts: {fileID: 682596010}
@@ -4623,44 +4682,75 @@ MonoBehaviour:
   scoreNum: {fileID: 1169365383}
   coinNum: {fileID: 829790913}
   questions:
-  - prompt: Add 1 to n
-    contextLine: Basic variable update
+  - prompt: Forge the correct sequence to create a counting loop from 1 to 5.
+    contextLine: 
     correctOrder:
-    - n = 3
-    - n = n + 1
+    - n = 1
+    - 'while n <= 5:'
+    - '    print(n)'
+    - '    n = n + 1'
+    distractors:
+    - 'while n >= 5:'
+    - print('done')
+    - n = n - 1
+    - 'if n == 5: break'
+    stepExplanations:
+    - Correct! Start by initializing `n` with a default value.
+    - "Nice! The while loop condition ensures the loop runs while n \u2264 5."
+    - Good job! This prints the current value of n.
+    - Right! Increment n so the loop progresses toward 5.
+    stepHints:
+    - 'Define variable first. '
+    - What condition keeps the loop running until 5?
+    - Show the value when the loop runs!
+    - "Make sure n doesn\u2019t stay the same forever!"
+  - prompt: Forge the correct order to compute the sum of numbers from 1 to 5.
+    contextLine: Use a variable to keep the running total.
+    correctOrder:
+    - total = 0
+    - 'for n in range(1, 6):'
+    - '    total = total + n'
+    - print(total)
+    distractors:
+    - total = n + total + 1
+    - for n in range(5)
     - print(n)
-    distractors:
-    - n + 1 = n
-    - n +=
-    - print(n +)
-    hint: Assign, then update, then show.
-    explainCorrect: Nice! We start with n, increase it, then print the result.
-  - prompt: Create list, add 5, get first value
-    contextLine: Lists and indexing
+    - total = n
+    stepExplanations:
+    - 'Start with an accumulator: total = 0'
+    - The for loop iterates from 1 up to (but not including) 6.
+    - Add each n to total inside the loop.
+    - Print the sum after the loop ends.
+    stepHints:
+    - Start with a variable that keeps track of a total or sum
+    - Use a loop that runs through each number you need to add.
+    - The total should increase by each n in the loop.
+    - Show the result to the player or console at the end.
+  - prompt: Forge the correct order to check if a number is even.
+    contextLine: The program should print 'Even' when the number divides by 2.
     correctOrder:
-    - nums = []
-    - nums.append(5)
-    - first = nums[0]
-    distractors:
-    - nums[0] = 5 # empty list
-    - append(nums, 5)
-    - first = nums[1]
-    hint: Make list, append, then index at 0.
-    explainCorrect: Correct! We create the list, put 5 in it, then read the first
-      slot.
-  - prompt: Set msg to "Even" or "Odd"
-    contextLine: If/else with %
-    correctOrder:
+    - n = 4
     - 'if n % 2 == 0:'
-    - '    msg = "Even"'
+    - '    print(''Even'')'
     - 'else:'
-    - '    msg = "Odd"'
+    - '    print(''Odd'')'
     distractors:
-    - 'if n % 2 = 0:'
-    - 'if n % 2: msg = "Even"'
-    - "else if True: msg = \"Odd\"\t"
-    hint: Use % 2 == 0 with colons and indents.
-    explainCorrect: "Great! % 2 == 0 means even; otherwise it\u2019s odd."
+    - n = 5
+    - 'if n % 2 != 0:'
+    - print('Even number')
+    - n = n + 2
+    stepExplanations:
+    - Start by defining the number you want to check.
+    - The condition `n % 2 == 0` is true for even numbers.
+    - This prints 'Even' when the condition passes.
+    - Else handles the case where n is not even.
+    - This prints 'Odd' when the condition fails.
+    stepHints:
+    - Set up your number before you test it.
+    - Use the modulo operator (%) to test divisibility by 2.
+    - What should the program do when the number is even?
+    - What keyword handles the alternative path?
+    - "What should print when the number isn\u2019t even?"
   shrineId: ShrineTwo
   wrongFlashColor: {r: 1, g: 0.5, b: 0.5, a: 1}
   wrongFlashDuration: 0.1
@@ -6560,8 +6650,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 358, y: 349.46}
-  m_SizeDelta: {x: 56.3927, y: 55}
+  m_AnchoredPosition: {x: 38, y: 339.7}
+  m_SizeDelta: {x: 316.33, y: 6.7703}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1784483715
 MonoBehaviour:
@@ -6583,7 +6673,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 6e49f902ecb285b4ab801cce9dfb9047, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 36f24b92ec89a4b439c28af14261bfda, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1

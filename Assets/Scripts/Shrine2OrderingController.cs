@@ -16,13 +16,17 @@ public class OrderQuestion
     [TextArea] public string contextLine;
     [TextArea] public string[] correctOrder;
     [TextArea] public string[] distractors;
-    [TextArea] public string hint;
-    [TextArea] public string explainCorrect;
+    [TextArea] public string[] stepExplanations; 
+    [TextArea] public string[] stepHints;
 }
 
 public class Shrine2OrderingController : MonoBehaviour
 {
-    [Header("Player (optional)")] public PlayerMovement playerMovement;
+
+    [Header("Characters")]
+    public PlayerMovement playerMovement;
+    public EnemyAnimator enemyAnimator;
+
 
     [Header("UI - Header")]
     public TMP_Text promptText;
@@ -35,11 +39,10 @@ public class Shrine2OrderingController : MonoBehaviour
     public CanvasGroup feedbackToast;
 
     [Header("UI - Choices")]
-    public Button[] choiceButtons;   // size 3 or 4
-    public TMP_Text[] choiceLabels;  // same size as buttons
-    public float stepTimeLimit = 0f; // 0 = off
-    public Image stepTimerFill;      // optional
-
+    public Button[] choiceButtons;   
+    public TMP_Text[] choiceLabels;
+    public float stepTimeLimit = 0f;
+    public Image stepTimerFill;      
     [Header("Hearts")]
     public HeartUI playerHearts;
     public HeartUI enemyHearts;
@@ -136,6 +139,12 @@ public class Shrine2OrderingController : MonoBehaviour
         var Q = questions[qIndex];
         if (promptText) promptText.text = Q.prompt;
         if (contextLineText) contextLineText.text = string.IsNullOrEmpty(Q.contextLine) ? "" : Q.contextLine;
+
+        if (stepTimeLimit > 0f)
+        {
+            stepTimeLeft = stepTimeLimit;
+            if (stepTimerFill) stepTimerFill.fillAmount = 1f;
+        }
         NewStep();
     }
 
@@ -166,8 +175,7 @@ public class Shrine2OrderingController : MonoBehaviour
 
         currentCorrectIndex = System.Array.IndexOf(choiceLabels.Select(t => t ? t.text : null).ToArray(), correct);
         stepActive = true;
-        if (stepTimeLimit > 0f) stepTimeLeft = stepTimeLimit;
-        if (stepTimerFill) stepTimerFill.fillAmount = 1f;
+        
     }
 
     void TryPress(int idx)
@@ -197,23 +205,68 @@ public class Shrine2OrderingController : MonoBehaviour
         var locked = Instantiate(forgedLinePrefab, forgedListContainer);
         locked.text = Q.correctOrder[stepIndex];
 
+        string explain = null;
+        if (Q.stepExplanations != null && stepIndex < Q.stepExplanations.Length)
+            explain = Q.stepExplanations[stepIndex];
+
+        
+        if (string.IsNullOrWhiteSpace(explain))
+            explain = (combo % 3 == 0 ? "Combo!" : "Nice!");
+
+        ShowToastTimed(explain, 3.5f);
+
         stepIndex++;
-        ShowToastTimed(combo % 3 == 0 ? "Combo!" : "Nice!", 0.7f);
         Invoke(nameof(NewStep), 0.05f);
+
+
+
+        if (enemyAnimator)
+        {
+            enemyAnimator.Hurt(true);           // turn ON
+            Invoke(nameof(EnemyStopHurt), 1.15f); // use your clip length here
+        }
+    }
+
+    void EnemyStopHurt()
+    {
+        if (enemyAnimator) enemyAnimator.Hurt(false); // turn OFF
     }
 
     void HandleWrong(bool timeout)
     {
         combo = 0;
         var Q = questions[qIndex];
-        ShowToast(string.IsNullOrWhiteSpace(Q.hint) ? (timeout ? "Time’s up!" : "Try again.") : Q.hint);
+        string stepHint = null;
+        if (Q.stepHints != null && stepIndex < Q.stepHints.Length)
+            stepHint = Q.stepHints[stepIndex];
+
+        string msg = string.IsNullOrWhiteSpace(stepHint)
+            ? (timeout ? "Time’s up!" : "Try again.")
+            : stepHint;
+
+        ShowToast(msg);
+
+
+
 
         playerLives = Mathf.Max(0, playerLives - 1);
         if (playerHearts) playerHearts.SetLives(playerLives);
         if (playerMovement) { playerMovement.isHurt(true); Invoke(nameof(StopHurt), 0.8f); }
 
         if (playerLives <= 0) { EndGameOver(); return; }
-        Invoke(nameof(NewStep), 0.05f);
+
+        if (timeout)
+        {
+            qIndex = Mathf.Clamp(qIndex + 1, 0, questions.Length - 1);
+            Invoke(nameof(LoadQuestion), 0.3f); // this is where the timer resets (per-question)
+        }
+        else
+        {
+            Invoke(nameof(NewStep), 0.05f);     // same question, same timer continues
+        }
+
+
+
     }
 
     void StopHurt() { if (playerMovement) playerMovement.isHurt(false); }
@@ -224,7 +277,7 @@ public class Shrine2OrderingController : MonoBehaviour
         if (enemyHearts) enemyHearts.SetLives(enemyLives);
 
         var Q = questions[qIndex];
-        ShowToastTimed(string.IsNullOrWhiteSpace(Q.explainCorrect) ? "Forged!" : Q.explainCorrect, 1.3f);
+       
 
         if (enemyLives <= 0) { EndQuestCleared(); return; }
         qIndex = Mathf.Clamp(qIndex + 1, 0, questions.Length - 1);

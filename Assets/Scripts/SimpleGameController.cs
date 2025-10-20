@@ -175,7 +175,7 @@ public class SimpleGameController : MonoBehaviour
         if (enemyAnimator)
         {
             enemyAnimator.Hurt(true);           // turn ON
-            Invoke(nameof(EnemyStopHurt), 0.6f); // use your clip length here
+            Invoke(nameof(EnemyStopHurt), 1.15f); // use your clip length here
         }
 
         string message = string.IsNullOrWhiteSpace(Q.explainCorrect) ? "Nice!" : Q.explainCorrect;

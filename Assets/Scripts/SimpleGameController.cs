@@ -65,7 +65,12 @@ public class SimpleGameController : MonoBehaviour
     public Image[] starFilled;   
     public Image[] starEmpty;    
     public TMP_Text scoreNum;    
-    public TMP_Text coinNum;     
+    public TMP_Text coinNum;
+
+    [Header("XP Rewards")]
+    [SerializeField] int rewardXP = 50;
+    [SerializeField] TMP_Text xpNum; // optional on panel
+
 
     [Header("IDs / Save")]
     public string shrineId = "ShrineOne"; // used for per-shrine best tracking 
@@ -245,19 +250,31 @@ public class SimpleGameController : MonoBehaviour
         int stars = ComputeStarsFromHearts();
         UpdateStarsUI(stars);
 
-        // Compute per-clear rewards
         var (score, coins) = ComputeRewards(stars);
-
-        // Update panel texts
         if (scoreNum) scoreNum.text = score.ToString();
         if (coinNum) coinNum.text = coins.ToString();
+        if (xpNum) xpNum.text = rewardXP.ToString();
 
-        // Save to Cloud Save once
         if (!rewardsGranted)
         {
             rewardsGranted = true;
-            _ = SaveRewardsAsync(stars, score, coins); // fire-and-forget
+            _ = SaveAllAsync();
         }
+
+        async Task SaveAllAsync()
+        {
+            try
+            {
+                var res = await RewardsHelper.SaveRewardsAndXpAsync(shrineId, stars, score, coins, rewardXP);
+                
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"SaveAll failed: {ex.Message}");
+            }
+        }
+
+
 
         if (questClearedPanel) questClearedPanel.SetActive(true);
     }
@@ -348,7 +365,7 @@ public class SimpleGameController : MonoBehaviour
 
 
     // Save totals to Cloud Save (adds to existing totals), and store per-shrine best stars
-    async Task SaveRewardsAsync(int stars, int score, int coins)
+    /*async Task SaveRewardsAsync(int stars, int score, int coins)
     {
         try
         {
@@ -390,7 +407,7 @@ public class SimpleGameController : MonoBehaviour
         {
             Debug.LogWarning($"SaveRewards failed: {ex.Message}");
         }
-    }
+    } */
 
     async Task EnsureUgsReadyAsync()    
     {

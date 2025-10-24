@@ -58,6 +58,11 @@ public class Shrine2OrderingController : MonoBehaviour
     public TMP_Text scoreNum;
     public TMP_Text coinNum;
 
+    [Header("XP Rewards")]
+    [SerializeField] int rewardXP = 50;
+    [SerializeField] TMP_Text xpNum;
+
+
     [Header("Content")]
     public OrderQuestion[] questions;
 
@@ -292,8 +297,29 @@ public class Shrine2OrderingController : MonoBehaviour
         var (score, coins) = ComputeRewards(stars);
         if (scoreNum) scoreNum.text = score.ToString();
         if (coinNum) coinNum.text = coins.ToString();
+        if (xpNum) xpNum.text = rewardXP.ToString();
 
-        if (!rewardsGranted) { rewardsGranted = true; _ = SaveRewardsAsync(stars, score, coins); }
+        if (!rewardsGranted)
+        {
+            rewardsGranted = true;
+            _ = SaveAllAsync();
+        }
+
+        async Task SaveAllAsync()
+        {
+            try
+            {
+                var res = await RewardsHelper.SaveRewardsAndXpAsync(shrineId, stars, score, coins, rewardXP);
+                // No level-up UI here.
+                // Do not overwrite the quest panel’s coinNum with total coins.
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Shrine2] SaveAll failed: {ex.Message}");
+            }
+        }
+
+
         if (questClearedPanel) questClearedPanel.SetActive(true);
     }
 
@@ -348,27 +374,7 @@ public class Shrine2OrderingController : MonoBehaviour
         return (score, coins);
     }
 
-    async Task SaveRewardsAsync(int stars, int score, int coins)
-    {
-        try
-        {
-            await EnsureUgsReadyAsync();
-            var keys = new HashSet<string> { "total_score", "total_coins", $"best_stars_{shrineId}" };
-            var loaded = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
-            int totalScore = 0, totalCoins = 0, bestStars = 0;
-            if (loaded.TryGetValue("total_score", out var sItem)) totalScore = sItem.Value.GetAs<int>();
-            if (loaded.TryGetValue("total_coins", out var cItem)) totalCoins = cItem.Value.GetAs<int>();
-            if (loaded.TryGetValue($"best_stars_{shrineId}", out var bItem)) bestStars = bItem.Value.GetAs<int>();
-            totalScore += score; totalCoins += coins; if (stars > bestStars) bestStars = stars;
-            var data = new Dictionary<string, object>{
-                { "total_score", totalScore },
-                { "total_coins", totalCoins },
-                { $"best_stars_{shrineId}", bestStars }
-            };
-            await CloudSaveService.Instance.Data.Player.SaveAsync(data);
-        }
-        catch (System.Exception ex) { Debug.LogWarning($"[Shrine2] SaveRewards failed: {ex.Message}"); }
-    }
+   
 
     async Task EnsureUgsReadyAsync()
     {

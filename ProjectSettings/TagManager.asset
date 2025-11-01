@@ -8,11 +8,11 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Slot
   - Water
   - UI
-  - 
-  - 
+  - CodeBlock
+  - Floor
   - 
   - 
   - 
@@ -40,4 +40,16 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Ground
+    uniqueID: 3476045989
+    locked: 0
+  - name: Props
+    uniqueID: 2721847961
+    locked: 0
+  - name: Characters
+    uniqueID: 569361041
+    locked: 0
+  - name: UIWorld
+    uniqueID: 1241198131
     locked: 0

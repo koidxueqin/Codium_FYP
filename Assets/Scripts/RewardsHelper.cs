@@ -46,6 +46,7 @@ public static class RewardsHelper
         int totalXp = loaded.TryGetValue("total_xp", out var x) ? x.Value.GetAs<int>() : 0;
         int nextXp = loaded.TryGetValue("next_xp", out var nx) ? nx.Value.GetAs<int>() : 50;
 
+
         totalScore += score;
         totalCoins += coins;
         if (stars > bestStars) bestStars = stars;

@@ -12,17 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f80f0b725eceee047a28750199534aaf, type: 3}
   m_Name: Q1
   m_EditorClassIdentifier: 
-  topic: Printing Text
-  instruction: Print "Hello, world!"
-  codeTemplateLines:
-  - print("             ")
-  blanksCount: 1
-  mode: 0
-  blanks:
-  - kind: 0
-    acceptedValues:
-    - '"Hello, world!"'
-    hintForWrong: Must exactly match "Hello, world!" including punctuation and quotes.
-  targetValue: 0
-  whyCorrect: "Correct! You printed \u201CHello, world!\u201D exactly."
-  whyWrongGeneral: 'Strings need quotes. Example: print("Hello, world!")'
+  topic: Printing
+  instruction: Print the word Hello.
+  prefix: print(
+  suffix: )
+  expectedKind: 0
+  correctAnswer: '"Hello"'
+  distractors:
+  - Hello
+  - hello
+  - '"hello"'
+  whyCorrect: '"Hello" is the exact string literal required; strings are written
+    inside quotes.'

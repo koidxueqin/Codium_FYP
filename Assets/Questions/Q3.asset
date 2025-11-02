@@ -12,24 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f80f0b725eceee047a28750199534aaf, type: 3}
   m_Name: Q3
   m_EditorClassIdentifier: 
-  topic: Arithmetic and variables
-  instruction: Make the output equal 14
-  codeTemplateLines:
-  - a = ____
-  - b = ____
-  - print(a + b * ____)
-  blanksCount: 3
-  mode: 1
-  blanks:
-  - kind: 1
-    acceptedValues: []
-    hintForWrong: 
-  - kind: 1
-    acceptedValues: []
-    hintForWrong: 
-  - kind: 1
-    acceptedValues: []
-    hintForWrong: 
-  targetValue: 14
-  whyCorrect: 'Correct! You followed operator precedence: multiplication before addition.'
-  whyWrongGeneral: Try different numbers so a + b * c equals 14.
+  topic: Arithmetic
+  instruction: Complete the code so it prints 14.
+  prefix: print(2 + 3 *
+  suffix: )
+  expectedKind: 1
+  correctAnswer: 4
+  distractors:
+  - 2
+  - 3
+  - 5
+  whyCorrect: Multiplication runs before addition; 2 + 3 * 4 = 14.

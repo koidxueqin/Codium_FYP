@@ -12,22 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f80f0b725eceee047a28750199534aaf, type: 3}
   m_Name: Q2
   m_EditorClassIdentifier: 
-  topic: Variables and printing
-  instruction: Make it print Hello, Alice!
-  codeTemplateLines:
-  - name = ____
-  - print("Hello, " + ____ + "!")
-  blanksCount: 2
-  mode: 0
-  blanks:
-  - kind: 0
-    acceptedValues:
-    - '"\"Alice\""'
-    hintForWrong: 'Include quotes because this is a string literal: "Alice"'
-  - kind: 2
-    acceptedValues:
-    - name
-    hintForWrong: 'Use the variable name without quotes: name'
-  targetValue: 0
-  whyCorrect: Perfect! The variable name holds "Alice", and print combines it correctly.
-  whyWrongGeneral: Check your quotes or variable name.
+  topic: Working with Lists
+  instruction: Fill in the blank so the code prints the first element of fruits.
+  prefix: print(
+  suffix: '[0])'
+  expectedKind: 2
+  correctAnswer: fruits
+  distractors:
+  - banana
+  - '"fruit"'
+  - '"list"'
+  whyCorrect: Variables are identifiers without quotes; name refers to the variable,
+    not a string.

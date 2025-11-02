@@ -1,5 +1,5 @@
 // CodeRunnerUI2D.cs
-using UnityEngine;
+/*using UnityEngine;
 using TMPro;
 
 public class CodeRunnerUI2D : MonoBehaviour
@@ -17,7 +17,7 @@ public class CodeRunnerUI2D : MonoBehaviour
     public GameObject codeBlockPrefab;
 
     [Header("Refs")]
-    public ShrineController2D shrine;
+    public Shrine3Controller shrine;
 
     // Replace OnRun() with this stricter logic
     public void OnRun()
@@ -82,4 +82,4 @@ public class CodeRunnerUI2D : MonoBehaviour
    
 
 
-}
+}*/

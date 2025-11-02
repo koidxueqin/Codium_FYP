@@ -14,7 +14,7 @@ public class CodeBlock2D : MonoBehaviour
     [Header("State (read-only)")]
     public TokenKind kind;
     public string valueText;
-    public bool isSnappedToSlot;   // true once placed into a slot
+    public bool isSnappedToSlot;
 
     public void Init(TokenKind k, string label)
     {
@@ -36,7 +36,6 @@ public class CodeBlock2D : MonoBehaviour
 
     public void OnDroppedFree()
     {
-        // Not used in this design (no free-drops), but kept for completeness.
         rb.bodyType = RigidbodyType2D.Dynamic;
         col.isTrigger = false;
     }
@@ -47,6 +46,4 @@ public class CodeBlock2D : MonoBehaviour
         col.isTrigger = true;
         isSnappedToSlot = true;
     }
-
-
 }

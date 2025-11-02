@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8712cb56479e76841b841c4b3012ca58, type: 3}
+  m_Name: Q2
+  m_EditorClassIdentifier: 
+  prompt: Create a variable called age and give it the value 12.
+  costHearts: 2
+  timeLimitSeconds: 15
+  acceptedAnswers:
+  - age = 12
+  acceptedRegex:
+  - '^\s*age\s*=\s*12\s*$ '
+  failHints:
+  - Use = to assign a value to a variable.
+  successExplanation: age = 12 stores the number 12 in the variable named age.

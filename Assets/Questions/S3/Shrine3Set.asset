@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b347c28b08faa24d8dd70340b3db42a, type: 3}
+  m_Name: Shrine3Set
+  m_EditorClassIdentifier: 
+  questions:
+  - {fileID: 11400000, guid: 413494819736f3e458045e96348d875b, type: 2}
+  - {fileID: 11400000, guid: f3dcb1ef9a705e34bae5f626710e1909, type: 2}
+  - {fileID: 11400000, guid: 55152afccd785484e937bd63740084bc, type: 2}
+  threeStarMinScore: 12
+  twoStarMinScore: 8
+  oneStarMinScore: 4

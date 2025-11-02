@@ -88,4 +88,15 @@ public class HeartUI : MonoBehaviour
         }
         transform.localScale = Vector3.one;
     }
+
+
+    public int CurrentHearts => _lives;        
+    public void SetHearts(int hearts) => SetLives(hearts); 
+
+    public void Heal(int amount = 1)        
+    {
+        _lives = Mathf.Min(maxLives, _lives + Mathf.Max(1, amount));
+        SetLives(_lives);
+    }
+
 }

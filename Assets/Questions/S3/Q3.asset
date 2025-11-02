@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8712cb56479e76841b841c4b3012ca58, type: 3}
+  m_Name: Q3
+  m_EditorClassIdentifier: 
+  prompt: 'Write a Python line that asks the user for their name and stores it in
+    name. Hint: "Enter name: "'
+  costHearts: 3
+  timeLimitSeconds: 20
+  acceptedAnswers:
+  - 'name = input("Enter name: ")'
+  acceptedRegex:
+  - '^name\s*=\s*input\s*\(\s*["''].*["'']\s*\)$ '
+  failHints:
+  - Use input() to get data from the user.
+  - Remember parentheses after input.
+  successExplanation: 'Use the input function to let users input values. Store string
+    in name. '

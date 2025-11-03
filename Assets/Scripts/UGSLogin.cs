@@ -8,7 +8,7 @@ using Unity.Services.Authentication.PlayerAccounts;
 public class UGSLogin : MonoBehaviour
 {
     [Header("Navigation")]
-    [SerializeField] private int menuSceneIndex = 1;     // set in Build Settings order
+    [SerializeField] private int WorldSceneIndex = 1;     // set in Build Settings order
     [SerializeField] private int startupSceneIndex = 0;  // where to go after logout
     private bool navigated;
 
@@ -74,14 +74,14 @@ public class UGSLogin : MonoBehaviour
         navigated = true;
 
         int count = SceneManager.sceneCountInBuildSettings;
-        if (menuSceneIndex < 0 || menuSceneIndex >= count)
+        if (WorldSceneIndex < 0 || WorldSceneIndex >= count)
         {
-            Debug.LogWarning($"menuSceneIndex {menuSceneIndex} is out of range (0..{count - 1}). " +
+            Debug.LogWarning($"WorldSceneIndex {WorldSceneIndex} is out of range (0..{count - 1}). " +
                              "Add scenes to File > Build Settings and set the correct index.");
             return;
         }
 
-        SceneManager.LoadScene(menuSceneIndex);
+        SceneManager.LoadScene(WorldSceneIndex);
     }
 
     // Hook this to your Logout button

@@ -243,14 +243,13 @@ public class Shrine3Controller : MonoBehaviour
         ShowQuestion(qIndex + 1);
     }
 
-    void OnWin() 
+    void OnWin()
     {
         state = S3State.Win;
         SaveProgress();
         LockRunner();
         if (questClearedPanel) questClearedPanel.SetActive(true);
 
- 
         int remaining = playerHearts ? playerHearts.CurrentHearts : 0;
         int stars = Mathf.Clamp(remaining, 1, 3);
         UpdateStarsUI(stars);
@@ -259,13 +258,19 @@ public class Shrine3Controller : MonoBehaviour
         if (scoreNum) scoreNum.text = scoreVal.ToString();
         if (coinNum) coinNum.text = coinsVal.ToString();
         if (xpNum) xpNum.text = rewardXP.ToString();
-        _ = SaveAllAsync();
 
-        async Task SaveAllAsync()
+        _ = SaveAllAsync();   // fire-and-forget
+
+        async System.Threading.Tasks.Task SaveAllAsync()
         {
             try
             {
-                await RewardsHelper.SaveRewardsAndXpAsync(shrineId, stars, scoreVal, coinsVal, rewardXP);
+                // Save to Cloud Save, then submit TOTAL score to leaderboard "codium_total"
+                await RewardsHelper.SaveRewardsXpAndSubmitAsync(
+                    shrineId, stars, scoreVal, coinsVal, rewardXP, CodiumLeaderboards.DefaultId
+                );
+                // (Optional) If this scene shows a board, you can force a refresh here.
+                // FindObjectOfType<LeaderboardUI>()?.RefreshOnce();
             }
             catch (System.Exception ex)
             {
@@ -273,6 +278,7 @@ public class Shrine3Controller : MonoBehaviour
             }
         }
     }
+
 
 
     bool CheckLose()

@@ -306,26 +306,32 @@ public class Shrine1Controller : MonoBehaviour
     {
         int stars = Mathf.Clamp(playerHp, 1, 3);
         UpdateStarsUI(stars);
+
         var (score, coins) = ComputeRewards(stars);
         if (scoreNum) scoreNum.text = score.ToString();
         if (coinNum) coinNum.text = coins.ToString();
         if (xpNum) xpNum.text = rewardXP.ToString();
 
-        _ = SaveAllAsync();
+        _ = SaveAllAsync();   // fire-and-forget
         questClearedPanel?.SetActive(true);
 
         async System.Threading.Tasks.Task SaveAllAsync()
         {
             try
             {
-                await RewardsHelper.SaveRewardsAndXpAsync(shrineId, stars, score, coins, rewardXP);
+                
+                await RewardsHelper.SaveRewardsXpAndSubmitAsync(
+                    shrineId, stars, score, coins, rewardXP, CodiumLeaderboards.DefaultId
+                );
+               
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"SaveAll failed: {ex.Message}");
+                Debug.LogWarning($"[Shrine1] SaveAll failed: {ex.Message}");
             }
         }
     }
+
 
     void EndGameOver()
     {

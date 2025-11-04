@@ -20,7 +20,7 @@ public class UsernameGate : MonoBehaviour
 
     async void Awake()
     {
-        // basic wiring guard
+        // Basic wiring guard
         if (!usernamePanel || !input || !saveButton)
             Debug.LogError("[UsernameGate] Wire panel, input, saveButton in Inspector.");
 
@@ -32,9 +32,21 @@ public class UsernameGate : MonoBehaviour
             return;
         }
 
-        bool has = await HasUsernameAsync();
-        if (!has) ShowPanel();
-        else HidePanel();
+        // Load saved username
+        string savedName = await LoadSavedUsernameAsync();
+
+        if (!string.IsNullOrWhiteSpace(savedName))
+        {
+            // Keep UGS Player Name in sync so leaderboards show it
+            try { await AuthenticationService.Instance.UpdatePlayerNameAsync(savedName); }
+            catch (System.Exception e) { Debug.LogWarning($"[UsernameGate] Set PlayerName failed: {e.Message}"); }
+
+            HidePanel();
+        }
+        else
+        {
+            ShowPanel();
+        }
     }
 
     void OnEnable()
@@ -42,6 +54,7 @@ public class UsernameGate : MonoBehaviour
         if (saveButton) saveButton.onClick.AddListener(OnClickSave);
         if (cancelButton) cancelButton.onClick.AddListener(OnClickCancel);
     }
+
     void OnDisable()
     {
         if (saveButton) saveButton.onClick.RemoveListener(OnClickSave);
@@ -53,7 +66,7 @@ public class UsernameGate : MonoBehaviour
         if (errorText) errorText.text = "";
         if (usernamePanel) usernamePanel.SetActive(true);
         if (input) { input.text = ""; input.Select(); input.ActivateInputField(); }
-        Time.timeScale = 0f; // optional pause while modal is open
+        Time.timeScale = 0f; // optional: pause while modal is open
     }
 
     void HidePanel()
@@ -62,28 +75,11 @@ public class UsernameGate : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    async Task<bool> HasUsernameAsync()
-    {
-        try
-        {
-            var data = await CloudSaveService.Instance.Data.Player.LoadAsync(
-                new HashSet<string> { UsernameKey }
-            );
-            return data.TryGetValue(UsernameKey, out var v) &&
-                   !string.IsNullOrWhiteSpace(v.Value.GetAs<string>());
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"[UsernameGate] Load username failed: {e.Message}");
-            return false;
-        }
-    }
-
     async void OnClickSave()
     {
         string desired = input ? input.text.Trim() : string.Empty;
 
-        // Local validation (adjust to taste)
+        // Local validation
         if (string.IsNullOrEmpty(desired))
         {
             SetError("Enter a username.");
@@ -99,10 +95,20 @@ public class UsernameGate : MonoBehaviour
 
         try
         {
-            // CLIENT-ONLY: just save to this player's data.
-            // NOTE: This does NOT enforce global uniqueness.
+            await EnsureUgsAsync();
+            if (!AuthenticationService.Instance.IsSignedIn)
+            {
+                SetError("Not signed in. Please try again.");
+                ToggleInteractable(true);
+                return;
+            }
+
+            // Save to this player's Cloud Save (client-side; not globally unique)
             var toSave = new Dictionary<string, object> { { UsernameKey, desired } };
             await CloudSaveService.Instance.Data.Player.SaveAsync(toSave);
+
+            // IMPORTANT: also set UGS Player Name so leaderboards display it
+            await AuthenticationService.Instance.UpdatePlayerNameAsync(desired);
 
             HidePanel();
             Debug.Log($"[UsernameGate] Username set to '{desired}'.");
@@ -118,12 +124,30 @@ public class UsernameGate : MonoBehaviour
     void OnClickCancel()
     {
         // Optional: sign out & go back to login
-        try { AuthenticationService.Instance.SignOut(true); } catch { AuthenticationService.Instance.SignOut(); }
+        try { AuthenticationService.Instance.SignOut(true); } catch { try { AuthenticationService.Instance.SignOut(); } catch { } }
         HidePanel();
-        // You can load your startup scene here if you want to bounce the player.
+        // Optionally load your startup scene here.
+    }
+
+    // ---- helpers ----
+
+    async Task<string> LoadSavedUsernameAsync()
+    {
+        try
+        {
+            var data = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { UsernameKey });
+            if (data.TryGetValue(UsernameKey, out var v))
+                return v.Value.GetAs<string>();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[UsernameGate] Load username failed: {e.Message}");
+        }
+        return null;
     }
 
     void SetError(string msg) { if (errorText) errorText.text = msg; }
+
     void ToggleInteractable(bool enable)
     {
         if (saveButton) saveButton.interactable = enable;
@@ -134,6 +158,9 @@ public class UsernameGate : MonoBehaviour
     {
         if (UnityServices.State != ServicesInitializationState.Initialized)
             await UnityServices.InitializeAsync();
-        // Do NOT auto sign-in anonymously here; your UGSLogin handles sign-in.
+
+        // Wait for your proper sign-in flow (Unity Player Accounts via UGSLogin)
+        if (!AuthenticationService.Instance.IsSignedIn)
+            await UGSLogin.WhenSignedIn;
     }
 }

@@ -346,13 +346,22 @@ public class Shrine2Controller : MonoBehaviour
         {
             try
             {
-                await RewardsHelper.SaveRewardsAndXpAsync(shrineId, stars, score, coins, rewardXP);
+                await RewardsHelper.SaveRewardsXpAndSubmitAsync(
+                    shrineId,
+                    stars,
+                    score,
+                    coins,
+                    rewardXP,
+                    CodiumLeaderboards.DefaultId // "codium_total"
+                );
+                // Optional: if your Menu is open, you can trigger a UI refresh there.
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[Shrine2] SaveAll failed: {ex.Message}");
             }
         }
+
     }
 
     void EndGameOver()

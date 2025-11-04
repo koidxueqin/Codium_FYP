@@ -8,14 +8,28 @@ using Unity.Services.Authentication.PlayerAccounts;
 public class UGSLogin : MonoBehaviour
 {
     [Header("Navigation")]
-    [SerializeField] private int WorldSceneIndex = 1;     // set in Build Settings order
-    [SerializeField] private int startupSceneIndex = 0;  // where to go after logout
+    [SerializeField] private int WorldSceneIndex = 1;   // set in Build Settings order
+    [SerializeField] private int startupSceneIndex = 0; // where to go after logout
     private bool navigated;
+
+    // === Awaitable sign-in gate for other systems (Leaderboards will await this) ===
+    public static Task WhenSignedIn => _signedInTcs.Task;
+    static TaskCompletionSource<bool> _signedInTcs =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     async void Awake()
     {
         await UnityServices.InitializeAsync();
+
+        // Subscribe first (so we don't miss a fast sign-in)
         PlayerAccountService.Instance.SignedIn += OnPlayerAccountsSignedIn;
+
+        // If Player Accounts is already signed in (e.g., returning to app), continue to UGS Auth
+        if (PlayerAccountService.Instance.IsSignedIn)
+        {
+            // Fire and forget; any failures are logged inside
+            _ = SignInWithUnityAuth();
+        }
     }
 
     void OnDestroy()
@@ -29,6 +43,7 @@ public class UGSLogin : MonoBehaviour
         await SignInWithUnityAuth();
     }
 
+    // Hook this to your "Sign In" button (or auto-call StartSignInAsync elsewhere)
     public async void OnSignInButton()
     {
         try
@@ -47,12 +62,17 @@ public class UGSLogin : MonoBehaviour
         {
             var token = PlayerAccountService.Instance.AccessToken;
 
+            // If the game already has an auth session, try linking Player Accounts first (guest->account upgrade)
             if (AuthenticationService.Instance.IsSignedIn &&
                 AuthenticationService.Instance.SessionTokenExists)
             {
                 try
                 {
                     await AuthenticationService.Instance.LinkWithUnityAsync(token);
+
+                    // Mark the awaitable as ready
+                    if (!_signedInTcs.Task.IsCompleted) _signedInTcs.TrySetResult(true);
+
                     OnSignedInNavigate();
                     return;
                 }
@@ -62,7 +82,12 @@ public class UGSLogin : MonoBehaviour
                 }
             }
 
+            // Normal sign-in with Unity Player Accounts
             await AuthenticationService.Instance.SignInWithUnityAsync(token);
+
+            // Mark the awaitable as ready BEFORE navigating so other systems can continue
+            if (!_signedInTcs.Task.IsCompleted) _signedInTcs.TrySetResult(true);
+
             OnSignedInNavigate();
         }
         catch (RequestFailedException ex) { Debug.LogException(ex); }
@@ -88,11 +113,15 @@ public class UGSLogin : MonoBehaviour
     public void OnSignOutButton()
     {
         // Optional: force clearing the session token so next launch requires login again.
-        // If your SDK version supports the bool overload, use true:
-        try { AuthenticationService.Instance.SignOut(true); } catch { /* fallback if overload not available */ AuthenticationService.Instance.SignOut(); }
+        try { AuthenticationService.Instance.SignOut(true); }
+        catch { try { AuthenticationService.Instance.SignOut(); } catch { } }
+
         try { PlayerAccountService.Instance.SignOut(); } catch { }
 
         navigated = false;
+
+        // Reset the awaitable so future systems will wait for a fresh sign-in
+        _signedInTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         int count = SceneManager.sceneCountInBuildSettings;
         if (startupSceneIndex < 0 || startupSceneIndex >= count)

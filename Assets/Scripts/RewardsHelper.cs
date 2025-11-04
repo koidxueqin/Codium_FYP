@@ -28,6 +28,16 @@ public static class RewardsHelper
     public static int NextXpAfter(int currentNextXp) =>
         Mathf.CeilToInt(currentNextXp * 1.1f);
 
+    // NEW: Convenience wrapper — save, then submit total_score to leaderboard
+    public static async Task<(int totalScore, int totalCoins, XpResult xp)>
+    SaveRewardsXpAndSubmitAsync(string shrineId, int stars, int score, int coins, int rewardXp, string leaderboardId = CodiumLeaderboards.DefaultId)
+    {
+        var result = await SaveRewardsAndXpAsync(shrineId, stars, score, coins, rewardXp);
+        // Submit the new TOTAL score to the chosen leaderboard
+        await CodiumLeaderboards.SubmitAsync(result.totalScore, leaderboardId);
+        return result;
+    }
+
     public static async Task<(int totalScore, int totalCoins, XpResult xp)>
     SaveRewardsAndXpAsync(string shrineId, int stars, int score, int coins, int rewardXp)
     {
@@ -45,7 +55,6 @@ public static class RewardsHelper
         int level = loaded.TryGetValue("level", out var lv) ? lv.Value.GetAs<int>() : 1;
         int totalXp = loaded.TryGetValue("total_xp", out var x) ? x.Value.GetAs<int>() : 0;
         int nextXp = loaded.TryGetValue("next_xp", out var nx) ? nx.Value.GetAs<int>() : 50;
-
 
         totalScore += score;
         totalCoins += coins;
@@ -68,15 +77,15 @@ public static class RewardsHelper
         }
 
         var data = new Dictionary<string, object>{
-    { "total_score", totalScore },
-    { "total_coins", totalCoins },
-    { $"best_stars_{shrineId}", bestStars },
-    { "level", level },
-    { "total_xp", totalXp },
-    { "next_xp", nextXp },
-    { "level_up_pending", leveledUp },               // NEW
-    { "level_up_bonus", leveledUp ? bonusCoins : 0 } // NEW
-};
+            { "total_score", totalScore },
+            { "total_coins", totalCoins },
+            { $"best_stars_{shrineId}", bestStars },
+            { "level", level },
+            { "total_xp", totalXp },
+            { "next_xp", nextXp },
+            { "level_up_pending", leveledUp },
+            { "level_up_bonus", leveledUp ? bonusCoins : 0 }
+        };
 
         await CloudSaveService.Instance.Data.Player.SaveAsync(data);
 
@@ -93,9 +102,13 @@ public static class RewardsHelper
 
     static async Task EnsureUgsAsync()
     {
+        // Use your app's real sign-in (Unity Player Accounts via UGSLogin), not anonymous.
         if (UnityServices.State != ServicesInitializationState.Initialized)
             await UnityServices.InitializeAsync();
-        if (!AuthenticationService.Instance.IsSignedIn)
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+        // Wait until UGSLogin completed sign-in
+        await UGSLogin.WhenSignedIn;
+
+        // At this point AuthenticationService.Instance.IsSignedIn should be true
     }
 }

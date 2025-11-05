@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -8,13 +8,19 @@ using Unity.Services.CloudSave;
 
 public class UserInfo : MonoBehaviour
 {
-    [SerializeField] TMP_Text levelAndXpText; // e.g., "0/50 XP  Level 1"
+    [Header("Profile")]
+    [SerializeField] TMP_Text usernameText;   // ← drag your UI text here
+
+    [Header("Stats")]
+    [SerializeField] TMP_Text levelAndXpText; // e.g., "0/50 XP"
     [SerializeField] TMP_Text totalCoinsText;
     [SerializeField] TMP_Text totalScoreText;
-    [SerializeField] GameObject levelUpPanel;  // assign LevelUpPanel
-    [SerializeField] TMP_Text levelUpMsg;      // assign LevelUpMsg
-    [SerializeField] TMP_Text levelUpLevelText;
     [SerializeField] TMP_Text levelNum;
+
+    [Header("Level Up UI")]
+    [SerializeField] GameObject levelUpPanel;   // assign LevelUpPanel
+    [SerializeField] TMP_Text levelUpMsg;       // assign LevelUpMsg
+    [SerializeField] TMP_Text levelUpLevelText;
 
     private async void OnEnable()
     {
@@ -27,11 +33,28 @@ public class UserInfo : MonoBehaviour
         try
         {
             var keys = new HashSet<string>{
-            "total_score","total_coins","level","total_xp","next_xp",
-            "level_up_pending","level_up_bonus"
-        };
+                "username",               // ← NEW
+                "total_score","total_coins","level","total_xp","next_xp",
+                "level_up_pending","level_up_bonus"
+            };
+
             var data = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
 
+            // ---- Username ----
+            string username = null;
+            if (data.TryGetValue("username", out var un))
+                username = un.Value.GetAs<string>();
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                // fallback to UGS PlayerName (set by UsernameGate)
+                try { username = AuthenticationService.Instance.PlayerName; }
+                catch { /* ignore */ }
+            }
+            if (string.IsNullOrWhiteSpace(username))
+                username = "Player";
+            if (usernameText) usernameText.text = username;
+
+            // ---- Stats ----
             int level = data.TryGetValue("level", out var lv) ? lv.Value.GetAs<int>() : 1;
             int totalXp = data.TryGetValue("total_xp", out var tx) ? tx.Value.GetAs<int>() : 0;
             int nextXp = data.TryGetValue("next_xp", out var nx) ? nx.Value.GetAs<int>() : 50;
@@ -41,35 +64,30 @@ public class UserInfo : MonoBehaviour
             bool pending = data.TryGetValue("level_up_pending", out var p) && p.Value.GetAs<bool>();
             int bonus = data.TryGetValue("level_up_bonus", out var b) ? b.Value.GetAs<int>() : 0;
 
-            // Update standard labels
             if (levelAndXpText) levelAndXpText.text = $"{totalXp}/{nextXp} XP";
             if (levelNum) levelNum.text = $"{level}";
             if (totalCoinsText) totalCoinsText.text = coins.ToString();
             if (totalScoreText) totalScoreText.text = score.ToString();
 
-            // Handle pending level-up prompt here
+            // ---- Level-up panel ----
             if (pending && bonus > 0)
             {
-                // Show panel
                 if (levelUpMsg) levelUpMsg.text = $"Level Up!\n{bonus}";
                 if (levelUpLevelText) levelUpLevelText.text = $"{level}";
                 if (levelUpPanel) levelUpPanel.SetActive(true);
 
-                // Immediately grant coins and clear flags
                 coins += bonus;
                 var toSave = new Dictionary<string, object>{
-                { "total_coins", coins },
-                { "level_up_pending", false },
-                { "level_up_bonus", 0 }
-            };
+                    { "total_coins", coins },
+                    { "level_up_pending", false },
+                    { "level_up_bonus", 0 }
+                };
                 await CloudSaveService.Instance.Data.Player.SaveAsync(toSave);
 
-                // Refresh coins label
                 if (totalCoinsText) totalCoinsText.text = coins.ToString();
             }
             else
             {
-                // Ensure panel is hidden if nothing pending
                 if (levelUpPanel) levelUpPanel.SetActive(false);
             }
         }
@@ -79,12 +97,10 @@ public class UserInfo : MonoBehaviour
         }
     }
 
-
     public void BtnCloseLevelUp()
     {
         if (levelUpPanel) levelUpPanel.SetActive(false);
     }
-
 
     static async Task EnsureUgsAsync()
     {

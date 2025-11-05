@@ -85,9 +85,9 @@ public class UsernameGate : MonoBehaviour
             SetError("Enter a username.");
             return;
         }
-        if (!System.Text.RegularExpressions.Regex.IsMatch(desired, "^[A-Za-z0-9_]{3,16}$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(desired, "^[A-Za-z0-9_]{2,12}$"))
         {
-            SetError("Use 3–16 letters/numbers/_ only.");
+            SetError("Use 2–12 letters/numbers/_ only.");
             return;
         }
 
@@ -119,6 +119,9 @@ public class UsernameGate : MonoBehaviour
             Debug.LogWarning($"[UsernameGate] Save failed: {e.Message}");
             ToggleInteractable(true);
         }
+
+        FindObjectOfType<UserInfo>()?.RefreshAsync();
+
     }
 
     void OnClickCancel()

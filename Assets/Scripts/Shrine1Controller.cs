@@ -73,7 +73,7 @@ public class Shrine1Controller : MonoBehaviour
         ShowBubble("", "", false);
 
         playerMovement?.isDead(false);
-        if (enemyAnimator) enemyAnimator.Hurt(false);
+        if (enemyAnimator) enemyAnimator.isHurt(false);
         if (playerMovement) playerMovement.isHurt(false);
 
         int hearts = Mathf.Max(1, set.questions.Count);
@@ -209,7 +209,7 @@ public class Shrine1Controller : MonoBehaviour
 
             if (enemyAnimator)
             {
-                enemyAnimator.Hurt(true);
+                enemyAnimator.isHurt(true);
                 Invoke(nameof(EnemyStopHurt), 1.0f);
             }
 
@@ -248,7 +248,7 @@ public class Shrine1Controller : MonoBehaviour
         }
     }
 
-    void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.Hurt(false); }
+    void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.isHurt(false); }
     void StopHurt() { if (playerMovement) playerMovement.isHurt(false); }
 
     void ShowBubble(string title, string body, bool showNext)
@@ -304,6 +304,7 @@ public class Shrine1Controller : MonoBehaviour
 
     void EndQuestCleared()
     {
+        enemyAnimator.isDead(true);
         int stars = Mathf.Clamp(playerHp, 1, 3);
         UpdateStarsUI(stars);
 

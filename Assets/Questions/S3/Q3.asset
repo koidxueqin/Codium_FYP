@@ -15,7 +15,7 @@ MonoBehaviour:
   prompt: 'Write a Python line that asks the user for their name and stores it in
     name. Hint: "Enter name: "'
   costHearts: 3
-  timeLimitSeconds: 20
+  timeLimitSeconds: 60
   acceptedAnswers:
   - 'name = input("Enter name: ")'
   acceptedRegex:

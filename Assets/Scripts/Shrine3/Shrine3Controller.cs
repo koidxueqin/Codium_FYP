@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
 using TMPro;
@@ -50,6 +50,7 @@ public class Shrine3Controller : MonoBehaviour
     public int qIndex;
     public float timeLeft;
     public int score;
+    public int correctCount;
 
     [Header("Rewards UI")]           
     public Image[] starFilled;       
@@ -60,7 +61,13 @@ public class Shrine3Controller : MonoBehaviour
     [SerializeField] TMP_Text xpNum; 
 
     [Header("IDs / Save")]           
-    public string shrineId = "ShrineThree"; 
+    public string shrineId = "ShrineThree";
+
+    [Header("Enemy Anim")]
+    public EnemyAnimator enemyAnimator;  
+
+    Coroutine _enemyHurtCo;             
+
 
 
     CodeBlock2D activeBlock; // one active block policy
@@ -74,7 +81,9 @@ public class Shrine3Controller : MonoBehaviour
         if (enemyHearts) enemyHearts.SetHearts(enemyHeartsStart);
         if (playerCarry) playerCarry.Init(this, carryAnchor, submitSlot, trashSlot);
         if (runner) runner.Init(this, spawnPoint, blocksParent, codeBlockPrefab);
+
     }
+
 
     void Start()
     {
@@ -121,12 +130,10 @@ public class Shrine3Controller : MonoBehaviour
     void OnTimerExpired()
     {
         timeLeft = 0f;
-        PlayerLoseHearts(1);
         DestroyActiveBlockIfAny();
-        UnlockRunner();
-        if (CheckLose()) return;
-        AdvanceOrWin();
+        FailQuest();
     }
+
 
     void ClearSlots()
     {
@@ -142,6 +149,19 @@ public class Shrine3Controller : MonoBehaviour
             activeBlock = null;
         }
     }
+
+    int ComputeStarsByHearts()
+    {
+        int current = playerHearts ? playerHearts.CurrentHearts : 0;
+
+
+        if (current >= playerHeartsStart) return 3;
+        if (current >= 3) return 2;
+        if (current >= 1) return 1;
+
+        return 0;
+    }
+
 
     public bool CanSpawnBlock() => state == S3State.AwaitInput && activeBlock == null;
 
@@ -198,9 +218,20 @@ public class Shrine3Controller : MonoBehaviour
 
         if (pass)
         {
+            // Start/refresh a short hurt flash
+            EnemyHurtPulse(0.25f);   // ~0.25s looks snappy
+
+            correctCount++;
             EnemyLoseHearts(q.costHearts);
             score += q.costHearts;
-            if (enemyHearts && enemyHearts.CurrentHearts <= 0) { OnWin(); return; }
+
+            if (enemyHearts && enemyHearts.CurrentHearts <= 0)
+            {
+                // If that hit killed the enemy, go straight to win/death
+                OnWin();
+                return;
+            }
+
             AdvanceOrWin();
         }
         else
@@ -208,8 +239,25 @@ public class Shrine3Controller : MonoBehaviour
             PlayerLoseHearts(q.costHearts);
             ShowFailHint(q);
             if (CheckLose()) return;
-            state = S3State.AwaitInput; // retry permitted
+            state = S3State.AwaitInput;
         }
+    }
+
+
+    void EnemyHurtPulse(float seconds)
+    {
+        if (!enemyAnimator) return;
+        // Stop a previous pulse so the new one restarts cleanly
+        if (_enemyHurtCo != null) StopCoroutine(_enemyHurtCo);
+        _enemyHurtCo = StartCoroutine(Co_EnemyHurtPulse(seconds));
+    }
+
+    System.Collections.IEnumerator Co_EnemyHurtPulse(float seconds)
+    {
+        enemyAnimator.isHurt(true);
+        yield return new WaitForSeconds(seconds);
+        enemyAnimator.isHurt(false);
+        _enemyHurtCo = null;
     }
 
     static bool CheckAccepted(Shrine3Question q, string payload)
@@ -243,15 +291,24 @@ public class Shrine3Controller : MonoBehaviour
         ShowQuestion(qIndex + 1);
     }
 
+
     void OnWin()
     {
         state = S3State.Win;
+
+        // Stop any hurt pulse and play death
+        if (_enemyHurtCo != null) { StopCoroutine(_enemyHurtCo); _enemyHurtCo = null; }
+        if (enemyAnimator)
+        {
+            enemyAnimator.isHurt(false);
+            enemyAnimator.isDead(true);
+        }
+
         SaveProgress();
         LockRunner();
         if (questClearedPanel) questClearedPanel.SetActive(true);
 
-        int remaining = playerHearts ? playerHearts.CurrentHearts : 0;
-        int stars = Mathf.Clamp(remaining, 1, 3);
+        int stars = ComputeStarsByHearts();
         UpdateStarsUI(stars);
 
         var (scoreVal, coinsVal) = ComputeRewards(stars);
@@ -259,18 +316,15 @@ public class Shrine3Controller : MonoBehaviour
         if (coinNum) coinNum.text = coinsVal.ToString();
         if (xpNum) xpNum.text = rewardXP.ToString();
 
-        _ = SaveAllAsync();   // fire-and-forget
+        _ = SaveAllAsync();
 
         async System.Threading.Tasks.Task SaveAllAsync()
         {
             try
             {
-                // Save to Cloud Save, then submit TOTAL score to leaderboard "codium_total"
                 await RewardsHelper.SaveRewardsXpAndSubmitAsync(
                     shrineId, stars, scoreVal, coinsVal, rewardXP, CodiumLeaderboards.DefaultId
                 );
-                // (Optional) If this scene shows a board, you can force a refresh here.
-                // FindObjectOfType<LeaderboardUI>()?.RefreshOnce();
             }
             catch (System.Exception ex)
             {
@@ -281,17 +335,29 @@ public class Shrine3Controller : MonoBehaviour
 
 
 
+    void FailQuest()
+    {
+        if (playerHearts) playerHearts.SetHearts(0);
+        DestroyActiveBlockIfAny();
+        LockRunner();
+        state = S3State.Lose;
+        if (_enemyHurtCo != null) { StopCoroutine(_enemyHurtCo); _enemyHurtCo = null; }
+        if (enemyAnimator) enemyAnimator.isHurt(false);  // ensure idle, not hurt
+        if (questFailedPanel) questFailedPanel.SetActive(true);
+    }
+
+
     bool CheckLose()
     {
         if (playerHearts && playerHearts.CurrentHearts <= 0)
         {
-            state = S3State.Lose;
-            if (questFailedPanel) questFailedPanel.SetActive(true);
-            LockRunner();
+            FailQuest();
             return true;
         }
         return false;
     }
+
+
 
     void PlayerLoseHearts(int n)
     {
@@ -308,12 +374,14 @@ public class Shrine3Controller : MonoBehaviour
 
     void SaveProgress()
     {
-        // Minimal placeholder persistence; replace with your existing save system.
         PlayerPrefs.SetInt("shrine3_cleared", 1);
         PlayerPrefs.SetInt("shrine3_score", score);
-        PlayerPrefs.SetInt("shrine3_stars", ComputeStars());
+        PlayerPrefs.SetInt("shrine3_correct", correctCount); // harmless to keep
+        PlayerPrefs.SetInt("shrine3_stars", ComputeStarsByHearts()); // CHANGED
         PlayerPrefs.Save();
     }
+
+
 
     int ComputeStars()
     {

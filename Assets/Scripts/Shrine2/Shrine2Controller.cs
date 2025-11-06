@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,18 +12,12 @@ public class OrderQuestion
 {
     [TextArea] public string prompt;
     [TextArea] public string contextLine;
-
-    // Labelled in the Inspector as "Correct Answers"
     [TextArea] public string[] correctOrder;
-
     [TextArea] public string[] distractors;
-
-    // If provided, shown when the whole question is completed
     [TextArea] public string[] stepExplanations;
-
-    // If provided, shown on wrong catches
     [TextArea] public string[] stepHints;
 }
+
 
 public class Shrine2Controller : MonoBehaviour
 {
@@ -50,6 +44,17 @@ public class Shrine2Controller : MonoBehaviour
     private int _spawnedCount = 0;
     private Coroutine _loop;
 
+    // -------------- Spawn Weights / Anti-repetition --------------
+    [Header("Spawn Weights")]
+    [Range(0f, 1f)] public float correctPickChance = 0.45f; // ~45% chance
+    [Tooltip("Guarantee the expected line at least this often (0 = no forcing).")]
+    public int forceExpectedEveryN = 4;
+    private int _sinceExpected = 0;
+
+    [Tooltip("Don’t repeat the same distractor in this many recent spawns.")]
+    public int noRepeatWindow = 2;
+    private readonly Queue<string> _recent = new();
+
     // Current spawn text pool (rebuilt per-question)
     [HideInInspector] public string[] blockTexts;
 
@@ -62,7 +67,6 @@ public class Shrine2Controller : MonoBehaviour
     private HashSet<string> remainingAnswers = new HashSet<string>();
     // All correct answers for quick membership checks (normalized)
     private HashSet<string> allCorrectThisQ = new HashSet<string>();
-
     // ------------------ Characters ------------------
     [Header("Characters")]
     public PlayerMovement playerMovement;
@@ -172,6 +176,13 @@ public class Shrine2Controller : MonoBehaviour
         if (questClearedPanel) questClearedPanel.SetActive(false);
         if (gameOverPanel) gameOverPanel.SetActive(false);
 
+        // >>> ADD: reset enemy animator flags on level start
+        if (enemyAnimator)
+        {
+            enemyAnimator.isHurt(false);
+            enemyAnimator.isDead(false);
+        }
+
         int lives = Mathf.Max(1, questions != null ? questions.Length : 1);
         playerLives = lives;
         enemyLives = lives;
@@ -187,6 +198,7 @@ public class Shrine2Controller : MonoBehaviour
             false
         );
     }
+
 
     void LoadQuestion()
     {
@@ -233,53 +245,60 @@ public class Shrine2Controller : MonoBehaviour
 
         // Resume spawning for this question
         StartSpawnLoopIfNeeded();
+
+        _sinceExpected = 0;
+        _recent.Clear();
     }
 
 
     void OnQuestionComplete()
     {
-        // Stop accepting until player proceeds
         stepActive = false;
-
-        // Stop spawning immediately on completion
         StopSpawnLoop();
 
         // Enemy loses 1 life
         enemyLives = Mathf.Max(0, enemyLives - 1);
         if (enemyHearts) enemyHearts.SetLives(enemyLives);
 
-        if (enemyAnimator)
-        {
-            enemyAnimator.Hurt(true);
-            Invoke(nameof(EnemyStopHurt), 1.15f);
-        }
-
-        // If that was the final hit, end the quest *right now* (no Next click needed)
         if (enemyLives <= 0)
         {
-            EndQuestCleared();
+            // >>> Ensure hurt pulses will not flip any flags back
+            CancelInvoke(nameof(EnemyStopHurt));
+
+            if (enemyAnimator)
+            {
+                enemyAnimator.isHurt(false);
+                enemyAnimator.isDead(true);  // <- will set bool if available, else crossfade to death state
+            }
+
+            EndQuestCleared();  // rewards + panels
             return;
         }
 
-        // Otherwise, show the usual explanation bubble and let the player proceed to the next question
+        // Not dead → play hurt
+        if (enemyAnimator)
+        {
+            enemyAnimator.isHurt(true);
+            Invoke(nameof(EnemyStopHurt), 1.15f);
+        }
+
+
+        // >>> NEW: only show the explanation for the LAST step we just completed
         var Q = questions[qIndex];
-        string explain =
-            (Q.stepExplanations != null && Q.stepExplanations.Length > 0)
-                ? string.Join("\n", Q.stepExplanations.Where(s => !string.IsNullOrWhiteSpace(s)))
-                : "Well done. You collected all required lines.";
+        int lastStep = Mathf.Max(0, (currentCorrectSeqNorm?.Length ?? 1) - 1);
+        string explain = GetStepSafe(Q.stepExplanations, lastStep, "Well done.");
 
         _onBubbleNext = () =>
         {
             qIndex = Mathf.Clamp(qIndex + 1, 0, questions.Length - 1);
-
             // Clear current bubble immediately before next content
             ShowBubble("", "", false);
-
             LoadQuestion();
         };
 
-        ShowBubble("Correct Answers Complete", explain, true);
+        ShowBubble("Sequence Complete", explain, true);
     }
+
 
 
     void HandleWrong(bool timeout)
@@ -287,7 +306,9 @@ public class Shrine2Controller : MonoBehaviour
         // Penalize
         playerLives = Mathf.Max(0, playerLives - 1);
         if (playerHearts) playerHearts.SetLives(playerLives);
-        if (playerMovement) { playerMovement.isHurt(true); Invoke(nameof(StopHurt), 0.8f); }
+        // Lock in hurt for N seconds and ignore inputs during that time
+        if (playerMovement) playerMovement.HurtOverlay(3f); 
+
 
         if (playerLives <= 0)
         {
@@ -296,15 +317,19 @@ public class Shrine2Controller : MonoBehaviour
         }
 
         var Q = questions[qIndex];
-        string hint =
-            (Q.stepHints != null && Q.stepHints.Length > 0)
-                ? Q.stepHints[0]
-                : (timeout ? "Time�s up." : "Not a required line.");
-        ShowBubble(timeout ? "Timeout" : "Wrong", hint, false);
 
-        // Resume accepting after a wrong
+
+        string fallback = timeout ? "Time’s up." : "Not the required line.";
+        string stepHint = GetStepSafe(Q.stepHints, nextRequiredIndex, fallback);
+
+        ShowSticky(timeout ? "Timeout" : "Wrong", stepHint);
+
+
+        // Resume/advance logic
         if (!timeout)
+        {
             stepActive = true;
+        }
         else
         {
             // On timeout, advance question
@@ -313,18 +338,20 @@ public class Shrine2Controller : MonoBehaviour
         }
     }
 
-    void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.Hurt(false); }
+
+    void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.isHurt(false); }
     void StopHurt() { if (playerMovement) playerMovement.isHurt(false); }
 
     void EndQuestCleared()
     {
+        
         ended = true;
-
         // Hard stop spawning and input
         StopSpawnLoop();
         stepActive = false;
         repeatSpawning = false;
-        if (playerMovement) playerMovement.enabled = false;
+
+        if (enemyAnimator) enemyAnimator.isDead(true);
 
         int stars = Mathf.Clamp(playerLives, 1, 3);
         UpdateStarsUI(stars);
@@ -436,15 +463,70 @@ public class Shrine2Controller : MonoBehaviour
 
     string PickText()
     {
-        if (blockTexts != null && blockTexts.Length > 0)
-        {
-            int idx = Random.Range(0, blockTexts.Length);
-            var chosen = blockTexts[idx];
-            if (!string.IsNullOrEmpty(chosen)) return chosen;
-        }
         var Q = (questions != null && questions.Length > 0) ? questions[qIndex] : null;
-        return Q != null ? (Q.prompt ?? "hello") : "hello";
+        if (Q == null) return "hello";
+
+        // Determine next expected line (original, not normalized)
+        string expectedOriginal = null;
+        if (Q.correctOrder != null && nextRequiredIndex >= 0 && nextRequiredIndex < Q.correctOrder.Length)
+            expectedOriginal = Q.correctOrder[nextRequiredIndex];
+
+        // Force the expected every N spawns
+        if (forceExpectedEveryN > 0 && _sinceExpected >= forceExpectedEveryN && !string.IsNullOrEmpty(expectedOriginal))
+        {
+            _sinceExpected = 0;
+            RememberRecent(expectedOriginal);
+            return expectedOriginal;
+        }
+
+        // Probabilistic bias toward expected
+        if (!string.IsNullOrEmpty(expectedOriginal) && Random.value < correctPickChance)
+        {
+            _sinceExpected = 0;
+            RememberRecent(expectedOriginal);
+            return expectedOriginal;
+        }
+
+        // Otherwise, pick a distractor or (other) text avoiding recent repeats
+        // Build a candidate list that excludes the expected line to vary the stream
+        var pool = new List<string>(blockTexts ?? System.Array.Empty<string>());
+        if (!string.IsNullOrEmpty(expectedOriginal))
+            pool.RemoveAll(s => Norm(s) == Norm(expectedOriginal));
+
+        // Filter out recent repeats if requested
+        if (noRepeatWindow > 0 && _recent.Count > 0)
+            pool.RemoveAll(s => _recent.Contains(s));
+
+        // Safety fallbacks
+        if (pool.Count == 0)
+        {
+            // If everything got filtered, return expected to keep gameplay moving
+            if (!string.IsNullOrEmpty(expectedOriginal))
+            {
+                _sinceExpected = 0;
+                RememberRecent(expectedOriginal);
+                return expectedOriginal;
+            }
+            // Or return something simple
+            return Q.prompt ?? "hello";
+        }
+
+        var chosen = pool[Random.Range(0, pool.Count)];
+        if (string.IsNullOrEmpty(chosen))
+            chosen = Q.prompt ?? "hello";
+
+        _sinceExpected++;
+        RememberRecent(chosen);
+        return chosen;
     }
+
+    void RememberRecent(string s)
+    {
+        if (noRepeatWindow <= 0 || string.IsNullOrEmpty(s)) return;
+        _recent.Enqueue(s);
+        while (_recent.Count > noRepeatWindow) _recent.Dequeue();
+    }
+
 
     bool ValidateSpawner()
     {
@@ -481,7 +563,6 @@ public class Shrine2Controller : MonoBehaviour
         string normText = Norm(text);
         string expected = currentCorrectSeqNorm[Mathf.Clamp(nextRequiredIndex, 0, currentCorrectSeqNorm.Length - 1)];
 
-        // Correct AND in the proper order
         if (normText == expected)
         {
             // Lock the caught line into the forged list (use original text as seen on block)
@@ -490,6 +571,12 @@ public class Shrine2Controller : MonoBehaviour
                 var locked = Instantiate(forgedLinePrefab, forgedListContainer);
                 locked.text = text;
             }
+
+            // >>> NEW: show explanation for THIS step (before we increment)
+            var Q = questions[qIndex];
+            string stepExplain = GetStepSafe(Q.stepExplanations, nextRequiredIndex, "Correct.");
+            ShowSticky("Correct", stepExplain);
+
 
             nextRequiredIndex++;
 
@@ -501,6 +588,7 @@ public class Shrine2Controller : MonoBehaviour
 
             return true;
         }
+
 
         // Wrong: either a distractor OR a correct line but out of order (or a repeat of a previous step)
         HandleWrong(timeout: false);
@@ -570,6 +658,23 @@ public class Shrine2Controller : MonoBehaviour
         s = s.Trim().Replace("\r\n", "\n");
         return ignoreCase ? s.ToLowerInvariant() : s;
     }
+
+    static string GetStepSafe(string[] arr, int i, string fallback = "")
+    {
+        if (arr == null || i < 0 || i >= arr.Length) return fallback;
+        var s = arr[i];
+        return string.IsNullOrWhiteSpace(s) ? fallback : s;
+    }
+
+
+    void ShowSticky(string title, string body)
+    {
+        // No timers, no clearing — just replace what’s displayed.
+        ShowBubble(title, body, showNext: false);
+    }
+
+
+
 
     // ------------- Buttons on end panels -------------
     public void BtnTryAgain() { if (ended) InitLevel(); }

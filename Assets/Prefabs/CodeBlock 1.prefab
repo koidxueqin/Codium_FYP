@@ -307,7 +307,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controller: {fileID: 0}
-  triggerTag: 
+  triggerTag: Catcher
   onMatch:
     m_PersistentCalls:
       m_Calls: []

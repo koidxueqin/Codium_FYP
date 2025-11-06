@@ -8,14 +8,21 @@ public class PlayerMovement : MonoBehaviour
     [Header("Animation")]
     [SerializeField] private Animator anim;
 
+    [Header("Hurt Overlay")]
+    [Tooltip("Default seconds to keep the 'hurt' animation playing after a wrong answer.")]
+    [SerializeField] private float hurtOverlaySecondsDefault = 3f;
+
     private Vector2 moveDirection;
     private Vector2 lastMoveDirection = Vector2.down; // default facing front
 
+    // timed overlay state
+    private float hurtOverlayUntil = -1f;
+
     void Update()
     {
+        // Always allow input & movement
         ProcessInputs();
 
-        // remember last non-zero move
         if (moveDirection != Vector2.zero)
             lastMoveDirection = moveDirection;
 
@@ -24,6 +31,7 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        // Movement is never blocked
         rb.velocity = moveDirection * moveSpeed;
     }
 
@@ -34,14 +42,13 @@ public class PlayerMovement : MonoBehaviour
         moveDirection = new Vector2(moveX, moveY).normalized;
     }
 
-    // ---------- Animator driving for your current parameter set ----------
+    // ---------- Animator driving ----------
     void UpdateAnimator()
     {
         bool moving = moveDirection != Vector2.zero;
 
         if (moving)
         {
-            // MOVING: set one of forward/back/left/right. Clear all idles.
             ClearIdleFlags();
             // choose dominant axis so diagonals don’t flicker
             if (Mathf.Abs(moveDirection.x) > Mathf.Abs(moveDirection.y))
@@ -55,10 +62,8 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            // IDLE: clear move flags, set exactly ONE idle flag based on lastMoveDirection
             ClearMoveFlags();
 
-            // dominant axis of the last move decides which idle to show
             if (Mathf.Abs(lastMoveDirection.x) > Mathf.Abs(lastMoveDirection.y))
             {
                 SetIdleFlags(front: false, back: false, left: lastMoveDirection.x < 0, right: lastMoveDirection.x > 0);
@@ -68,6 +73,10 @@ public class PlayerMovement : MonoBehaviour
                 SetIdleFlags(front: lastMoveDirection.y < 0, back: lastMoveDirection.y > 0, left: false, right: false);
             }
         }
+
+        // Apply the timed HURT overlay *on top* of whatever the move/idle flags are
+        bool hurtActive = Time.time < hurtOverlayUntil;
+        anim.SetBool("hurt", hurtActive);
     }
 
     // Helpers to ensure mutual exclusivity (no two bools true at once)
@@ -83,7 +92,7 @@ public class PlayerMovement : MonoBehaviour
 
     void SetIdleFlags(bool front, bool back, bool left, bool right)
     {
-        anim.SetBool("idle", front);        
+        anim.SetBool("idle", front);
         anim.SetBool("idle_back", back);
         anim.SetBool("idle_left", left);
         anim.SetBool("idle_right", right);
@@ -91,15 +100,17 @@ public class PlayerMovement : MonoBehaviour
 
     void ClearIdleFlags() => SetIdleFlags(false, false, false, false);
 
-    public void isDead(bool die) {
-        anim.SetBool("die", die);
+    public void isDead(bool die) => anim.SetBool("die", die);
+
+    // Keep for backward compatibility (direct control if you need it elsewhere)
+    public void isHurt(bool hurt) => anim.SetBool("hurt", hurt);
+
+
+    public void HurtOverlay(float seconds = -1f)
+    {
+        if (seconds <= 0f) seconds = hurtOverlaySecondsDefault;
+        float until = Time.time + seconds;
+        // Extend if already active so overlapping hurts don't shorten it
+        if (until > hurtOverlayUntil) hurtOverlayUntil = until;
     }
-
-    public void isHurt(bool hurt) {
-        anim.SetBool("hurt", hurt);
-    }
-
-
-  
-
 }

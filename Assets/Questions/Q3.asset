@@ -23,3 +23,5 @@ MonoBehaviour:
   - 3
   - 5
   whyCorrect: Multiplication runs before addition; 2 + 3 * 4 = 14.
+  wrongHints:
+  - Multiplication first!

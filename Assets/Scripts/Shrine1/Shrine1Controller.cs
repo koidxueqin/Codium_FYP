@@ -4,6 +4,8 @@ using TMPro;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
+using System.Threading.Tasks;   
+
 
 public class Shrine1Controller : MonoBehaviour
 {
@@ -51,6 +53,8 @@ public class Shrine1Controller : MonoBehaviour
     int qIndex, playerHp, enemyHp;
     bool ended;
     readonly List<CodeBlock2D> spawned = new();
+    int wrongAttemptsThisQuestion = 0; // NEW: per-question wrong counter
+
 
     void Start()
     {
@@ -100,6 +104,8 @@ public class Shrine1Controller : MonoBehaviour
     void LoadQuestion(int i)
     {
         ClearAllLooseBlocks();
+
+        wrongAttemptsThisQuestion = 0;
 
         var q = set.questions[i];
         if (instructionText) instructionText.text = q.instruction ?? "";
@@ -182,7 +188,7 @@ public class Shrine1Controller : MonoBehaviour
     // Called from PlayerCarry2D after Snap()
     public void NotifySnapped(CodeBlock2D cb)
     {
-        ShowBubble("", "", false);
+        
         var slot = (slots != null && slots.Length > 0) ? slots[0] : null;
         if (!slot || slot.occupied == null) return;
         ValidateCurrent(slot.occupied);
@@ -213,7 +219,9 @@ public class Shrine1Controller : MonoBehaviour
                 Invoke(nameof(EnemyStopHurt), 1.0f);
             }
 
-            ShowBubble("Correct!", string.IsNullOrWhiteSpace(q.whyCorrect) ? "Nice!" : q.whyCorrect, true);
+            // Explanation on correct
+            string correctMsg = string.IsNullOrWhiteSpace(q.whyCorrect) ? "Nice!" : q.whyCorrect;
+            ShowBubble("Correct!", correctMsg, true);
 
             // Destroy all other blocks and keep the one in the slot
             DestroyAllLooseBlocksExcept(filled);
@@ -226,6 +234,8 @@ public class Shrine1Controller : MonoBehaviour
         }
         else
         {
+            wrongAttemptsThisQuestion++; // NEW
+
             playerHp = Mathf.Max(0, playerHp - 1);
             playerHearts?.SetLives(playerHp);
 
@@ -238,7 +248,15 @@ public class Shrine1Controller : MonoBehaviour
             var slot = slots[0];
             if (slot) slot.ClearIfOccupied();
 
-            ShowBubble("Try again", "That block doesn’t fit the blank. Pick another one.", false);
+            // Hint on wrong (round-robin if multiple present)
+            string hintText = "That block doesn’t fit the blank. Pick another one.";
+            if (q.wrongHints != null && q.wrongHints.Length > 0)
+            {
+                int idx = (wrongAttemptsThisQuestion - 1) % q.wrongHints.Length;
+                if (!string.IsNullOrWhiteSpace(q.wrongHints[idx]))
+                    hintText = q.wrongHints[idx];
+            }
+            ShowBubble("Hint", hintText, false); // stays until next toast
 
             if (playerHp <= 0)
             {
@@ -247,6 +265,7 @@ public class Shrine1Controller : MonoBehaviour
             }
         }
     }
+
 
     void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.isHurt(false); }
     void StopHurt() { if (playerMovement) playerMovement.isHurt(false); }
@@ -264,6 +283,7 @@ public class Shrine1Controller : MonoBehaviour
         if (ended) return;
         int next = qIndex + 1;
         if (next >= set.questions.Count) return;
+        wrongAttemptsThisQuestion = 0;
         qIndex = next;
         LoadQuestion(qIndex);
     }
@@ -305,32 +325,66 @@ public class Shrine1Controller : MonoBehaviour
     void EndQuestCleared()
     {
         enemyAnimator.isDead(true);
-        int stars = Mathf.Clamp(playerHp, 1, 3);
+
+        // 1) Stars from hearts (clamped 1..3)
+        int stars = RewardsHelper.ComputeStarsFromHearts(playerHp);
         UpdateStarsUI(stars);
 
-        var (score, coins) = ComputeRewards(stars);
+        // 2) Score/coins from stars (via RewardsHelper)
+        var (score, coins) = RewardsHelper.ComputeRewards(stars);
+
+        // 3) Update the panel numbers (your existing UI)
         if (scoreNum) scoreNum.text = score.ToString();
         if (coinNum) coinNum.text = coins.ToString();
         if (xpNum) xpNum.text = rewardXP.ToString();
 
-        _ = SaveAllAsync();   // fire-and-forget
+        _ = SaveAllAsync(); // fire-and-forget to avoid blocking UI
         questClearedPanel?.SetActive(true);
 
-        async System.Threading.Tasks.Task SaveAllAsync()
+        async Task SaveAllAsync()
         {
             try
             {
-                
                 await RewardsHelper.SaveRewardsXpAndSubmitAsync(
-                    shrineId, stars, score, coins, rewardXP, CodiumLeaderboards.DefaultId
+                    shrineId: shrineId,         
+                    stars: stars,
+                    score: score,
+                    coins: coins,
+                    rewardXp: rewardXP,
+                    leaderboardId: CodiumLeaderboards.DefaultId
                 );
-               
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[Shrine1] SaveAll failed: {ex.Message}");
             }
-        }
+
+           
+        } 
+
+        _ = SaveShrine1MetaAsync();
+
+        async System.Threading.Tasks.Task SaveShrine1MetaAsync()
+            {
+                try
+                {
+                    var keys = new HashSet<string> { $"best_score_{shrineId}" };
+                    var loaded = await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.LoadAsync(keys);
+                    int currentBest = loaded.TryGetValue($"best_score_{shrineId}", out var v) ? v.Value.GetAs<int>() : 0;
+                    int newBest = Mathf.Max(currentBest, score);
+
+                    var toSave = new Dictionary<string, object> {
+            { $"cleared_{shrineId}", true },
+            { $"best_score_{shrineId}", newBest }
+        };
+                    await Unity.Services.CloudSave.CloudSaveService.Instance.Data.Player.SaveAsync(toSave);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[Shrine1] Save meta failed: {ex.Message}");
+                }
+            }
+
     }
 
 
@@ -364,12 +418,6 @@ public class Shrine1Controller : MonoBehaviour
         if (keep) spawned.Add(keep);
     }
 
-    (int score, int coins) ComputeRewards(int stars)
-    {
-        int score = stars * 500;
-        int coins = stars switch { 3 => 100, 2 => 60, _ => 30 };
-        return (score, coins);
-    }
 
     void UpdateStarsUI(int stars)
     {

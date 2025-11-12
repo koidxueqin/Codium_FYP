@@ -1,11 +1,15 @@
 ﻿using System.Collections;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;    
 using TMPro;
+using Unity.Services.CloudSave;   
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Threading.Tasks;     // ADD
-using UnityEngine.UI;            // ADD (if you wire star/score UI)
+using UnityEngine.UI;
+using System.Collections.Generic;   
+
+
 
 
 public enum S3State { Intro, AwaitInput, BlockSpawned, Carrying, InSubmitSnap, Resolving, NextQuestion, Win, Lose }
@@ -63,9 +67,9 @@ public class Shrine3Controller : MonoBehaviour
     [Header("IDs / Save")]           
     public string shrineId = "ShrineThree";
 
-    [Header("Enemy Anim")]
-    public EnemyAnimator enemyAnimator;  
-
+    [Header("Animators")]
+    public EnemyAnimator enemyAnimator;
+    public PlayerMovement playerMovement;
     Coroutine _enemyHurtCo;             
 
 
@@ -82,7 +86,14 @@ public class Shrine3Controller : MonoBehaviour
         if (playerCarry) playerCarry.Init(this, carryAnchor, submitSlot, trashSlot);
         if (runner) runner.Init(this, spawnPoint, blocksParent, codeBlockPrefab);
 
+
+        if (playerMovement)
+        {
+            playerMovement.isDead(false);
+            playerMovement.enabled = true; 
+        }
     }
+
 
 
     void Start()
@@ -304,7 +315,6 @@ public class Shrine3Controller : MonoBehaviour
             enemyAnimator.isDead(true);
         }
 
-        SaveProgress();
         LockRunner();
         if (questClearedPanel) questClearedPanel.SetActive(true);
 
@@ -322,9 +332,13 @@ public class Shrine3Controller : MonoBehaviour
         {
             try
             {
+                // 1) Save totals + best stars + XP, then submit TOTAL score
                 await RewardsHelper.SaveRewardsXpAndSubmitAsync(
                     shrineId, stars, scoreVal, coinsVal, rewardXP, CodiumLeaderboards.DefaultId
                 );
+
+                // 2) Save shrine meta: cleared + best per-shrine score
+                await SaveShrine3MetaAsync(scoreVal);
             }
             catch (System.Exception ex)
             {
@@ -332,6 +346,35 @@ public class Shrine3Controller : MonoBehaviour
             }
         }
     }
+
+    async Task SaveShrine3MetaAsync(int runScore)
+    {
+        try
+        {
+            string bestScoreKey = $"best_score_{shrineId}";
+            string clearedKey = $"cleared_{shrineId}";
+
+            // Load current best score (if any)
+            var keys = new HashSet<string> { bestScoreKey };
+            var loaded = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
+
+            int currentBest = loaded.TryGetValue(bestScoreKey, out var v) ? v.Value.GetAs<int>() : 0;
+            int newBest = Mathf.Max(currentBest, runScore);
+
+            var toSave = new Dictionary<string, object> {
+            { clearedKey, true },
+            { bestScoreKey, newBest }
+        };
+
+            await CloudSaveService.Instance.Data.Player.SaveAsync(toSave);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[Shrine3] Save meta failed: {ex.Message}");
+        }
+    }
+
+
 
 
 
@@ -341,10 +384,18 @@ public class Shrine3Controller : MonoBehaviour
         DestroyActiveBlockIfAny();
         LockRunner();
         state = S3State.Lose;
+
+        if (playerMovement)
+        {
+            playerMovement.isDead(true);
+            playerMovement.enabled = false; 
+        }
+
         if (_enemyHurtCo != null) { StopCoroutine(_enemyHurtCo); _enemyHurtCo = null; }
-        if (enemyAnimator) enemyAnimator.isHurt(false);  // ensure idle, not hurt
+        if (enemyAnimator) enemyAnimator.isHurt(false); 
         if (questFailedPanel) questFailedPanel.SetActive(true);
     }
+
 
 
     bool CheckLose()
@@ -372,14 +423,7 @@ public class Shrine3Controller : MonoBehaviour
     void LockRunner() { if (runner) runner.SetLocked(true); }
     void UnlockRunner() { if (runner) runner.SetLocked(false); }
 
-    void SaveProgress()
-    {
-        PlayerPrefs.SetInt("shrine3_cleared", 1);
-        PlayerPrefs.SetInt("shrine3_score", score);
-        PlayerPrefs.SetInt("shrine3_correct", correctCount); // harmless to keep
-        PlayerPrefs.SetInt("shrine3_stars", ComputeStarsByHearts()); // CHANGED
-        PlayerPrefs.Save();
-    }
+
 
 
 

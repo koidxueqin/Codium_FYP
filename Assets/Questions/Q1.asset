@@ -20,7 +20,9 @@ MonoBehaviour:
   correctAnswer: '"Hello"'
   distractors:
   - Hello
-  - hello
+  - greeting
   - '"hello"'
   whyCorrect: '"Hello" is the exact string literal required; strings are written
     inside quotes.'
+  wrongHints:
+  - Strings use quotes! Watch for cases.

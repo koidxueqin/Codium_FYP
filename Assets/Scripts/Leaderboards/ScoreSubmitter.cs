@@ -6,6 +6,6 @@ public class ScoreSubmitter : MonoBehaviour
 
     public void SubmitFinal(int finalScore)
     {
-        _ = CodiumLeaderboards.SubmitAsync(finalScore, displayNameOverride);
+        _ = CodiumLeaderboards.SubmitAsync(finalScore, CodiumLeaderboards.DefaultId, displayNameOverride);
     }
 }

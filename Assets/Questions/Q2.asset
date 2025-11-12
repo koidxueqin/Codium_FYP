@@ -24,3 +24,5 @@ MonoBehaviour:
   - '"list"'
   whyCorrect: Variables are identifiers without quotes; name refers to the variable,
     not a string.
+  wrongHints:
+  - identifiers should not have quotes! Select element name.

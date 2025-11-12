@@ -27,4 +27,7 @@ public class QuestionDef : ScriptableObject
     public string[] distractors;
 
     [TextArea] public string whyCorrect;
+    [TextArea]public string[] wrongHints;
+
+
 }

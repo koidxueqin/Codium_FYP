@@ -6,6 +6,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Unity.Services.CloudSave; 
+
 
 [System.Serializable]
 public class OrderQuestion
@@ -344,18 +346,19 @@ public class Shrine2Controller : MonoBehaviour
 
     void EndQuestCleared()
     {
-        
         ended = true;
-        // Hard stop spawning and input
         StopSpawnLoop();
         stepActive = false;
         repeatSpawning = false;
 
         if (enemyAnimator) enemyAnimator.isDead(true);
 
-        int stars = Mathf.Clamp(playerLives, 1, 3);
+        // Stars from hearts (clamped 1..3)
+        int stars = RewardsHelper.ComputeStarsFromHearts(playerLives);
         UpdateStarsUI(stars);
-        var (score, coins) = ComputeRewards(stars);
+
+        // Score/coins from stars
+        var (score, coins) = RewardsHelper.ComputeRewards(stars);
 
         if (scoreNum) scoreNum.text = score.ToString();
         if (coinNum) coinNum.text = coins.ToString();
@@ -373,22 +376,51 @@ public class Shrine2Controller : MonoBehaviour
         {
             try
             {
+                // 1) Save totals + best stars + XP, then submit TOTAL score to leaderboard
                 await RewardsHelper.SaveRewardsXpAndSubmitAsync(
                     shrineId,
                     stars,
                     score,
                     coins,
                     rewardXP,
-                    CodiumLeaderboards.DefaultId // "codium_total"
+                    CodiumLeaderboards.DefaultId
                 );
-                // Optional: if your Menu is open, you can trigger a UI refresh there.
+
+                // 2) Save shrine meta: cleared flag + best per-shrine score
+                await SaveShrine2MetaAsync(score);
             }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[Shrine2] SaveAll failed: {ex.Message}");
             }
         }
+    }
 
+    async Task SaveShrine2MetaAsync(int runScore)
+    {
+        try
+        {
+            string bestScoreKey = $"best_score_{shrineId}";
+            string clearedKey = $"cleared_{shrineId}";
+
+            // Load current best score, if any
+            var keys = new HashSet<string> { bestScoreKey };
+            var loaded = await CloudSaveService.Instance.Data.Player.LoadAsync(keys);
+
+            int currentBest = loaded.TryGetValue(bestScoreKey, out var v) ? v.Value.GetAs<int>() : 0;
+            int newBest = Mathf.Max(currentBest, runScore);
+
+            var toSave = new Dictionary<string, object> {
+            { clearedKey, true },
+            { bestScoreKey, newBest }
+        };
+
+            await CloudSaveService.Instance.Data.Player.SaveAsync(toSave);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[Shrine2] Save meta failed: {ex.Message}");
+        }
     }
 
     void EndGameOver()

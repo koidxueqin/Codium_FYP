@@ -387,14 +387,27 @@ public class Shrine3Controller : MonoBehaviour
 
         if (playerMovement)
         {
+            var rb = playerMovement.rb;
             playerMovement.isDead(true);
-            playerMovement.enabled = false; 
+
+           
+            if (rb)
+            {
+                rb.velocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.constraints = RigidbodyConstraints2D.FreezeAll; 
+            }
+        
+             playerMovement.enabled = true;
+
         }
 
         if (_enemyHurtCo != null) { StopCoroutine(_enemyHurtCo); _enemyHurtCo = null; }
-        if (enemyAnimator) enemyAnimator.isHurt(false); 
+        if (enemyAnimator) enemyAnimator.isHurt(false);
         if (questFailedPanel) questFailedPanel.SetActive(true);
+        if (bubbleBody) bubbleBody.text = "You ran out of hearts.";
     }
+
 
 
 

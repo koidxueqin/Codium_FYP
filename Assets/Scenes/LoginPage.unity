@@ -1329,7 +1329,7 @@ MonoBehaviour:
   startupSceneIndex: 0
   useAnonymousInEditor: 1
   useAnonymousInBuild: 0
-  devProfile: test5
+  devProfile: test1
   detectFirstTime: 1
 --- !u!1 &1813027459
 GameObject:

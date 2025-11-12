@@ -309,7 +309,7 @@ public class Shrine2Controller : MonoBehaviour
         playerLives = Mathf.Max(0, playerLives - 1);
         if (playerHearts) playerHearts.SetLives(playerLives);
         // Lock in hurt for N seconds and ignore inputs during that time
-        if (playerMovement) playerMovement.HurtOverlay(3f); 
+        if (playerMovement) playerMovement.HurtOverlay(1f); 
 
 
         if (playerLives <= 0)

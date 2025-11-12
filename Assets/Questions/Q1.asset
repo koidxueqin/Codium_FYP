@@ -19,9 +19,9 @@ MonoBehaviour:
   expectedKind: 0
   correctAnswer: '"Hello"'
   distractors:
+  - '"Helo"'
+  - hello
   - Hello
-  - greeting
-  - '"hello"'
   whyCorrect: '"Hello" is the exact string literal required; strings are written
     inside quotes.'
   wrongHints:

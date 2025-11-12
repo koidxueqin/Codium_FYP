@@ -275,13 +275,8 @@ MonoBehaviour:
       m_Sprite: {fileID: -99331809, guid: 2bb81522c33d72a4cb6a0daf802028b5, type: 3}
       m_FromMain: 0
       m_SpriteOverride: {fileID: -99331809, guid: 2bb81522c33d72a4cb6a0daf802028b5, type: 3}
-    - m_Name: f5
-      m_Hash: 617421565
-      m_Sprite: {fileID: -1464092549, guid: 2bb81522c33d72a4cb6a0daf802028b5, type: 3}
-      m_FromMain: 0
-      m_SpriteOverride: {fileID: -1464092549, guid: 2bb81522c33d72a4cb6a0daf802028b5, type: 3}
     m_FromMain: 0
-    m_EntryOverrideCount: 5
+    m_EntryOverrideCount: 4
   - m_Name: player_dead
     m_Hash: 255793431
     m_CategoryList: []
@@ -314,5 +309,5 @@ MonoBehaviour:
     m_FromMain: 0
     m_EntryOverrideCount: 5
   m_PrimaryLibraryGUID: 
-  m_ModificationHash: 638979944118735615
+  m_ModificationHash: 638985835401462815
   m_Version: 1

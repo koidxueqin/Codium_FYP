@@ -177,8 +177,7 @@ public class Shrine1Controller : MonoBehaviour
 
             if (tmp)
             {
-                if (cb.kind == TokenKind.StringLiteral) tmp.text = $"\"{cb.valueText}\"";
-                else tmp.text = cb.valueText;
+                tmp.text = cb.valueText;
             }
 
             spawned.Add(cb);
@@ -196,15 +195,45 @@ public class Shrine1Controller : MonoBehaviour
 
     void ValidateCurrent(CodeBlock2D filled)
     {
+        // --- local helpers (scoped to this method) ---
+        bool IsQuoted(string s) =>
+            !string.IsNullOrEmpty(s) && s.Length >= 2 && s[0] == '"' && s[^1] == '"';
+
+        string StripOuterDoubleQuotes(string s) =>
+            IsQuoted(s) ? s.Substring(1, s.Length - 2) : (s ?? string.Empty);
+        // ---------------------------------------------
+
         var q = set.questions[qIndex];
         var expectedKind = MapAnswerKind(q.expectedKind);
 
         bool kindOk = filled.kind == expectedKind;
 
-        bool valueOk = string.Equals(
-            NormalizeForKind(filled.valueText, filled.kind),
-            NormalizeForKind(q.correctAnswer, expectedKind),
-            System.StringComparison.Ordinal);
+        bool valueOk;
+        if (expectedKind == TokenKind.StringLiteral)
+        {
+            // For strings: quotes must match AND inner text must match (case-sensitive as before)
+            string a = filled.valueText ?? string.Empty;
+            string b = q.correctAnswer ?? string.Empty;
+
+            bool aQuoted = IsQuoted(a);
+            bool bQuoted = IsQuoted(b);
+
+            valueOk = (aQuoted == bQuoted) &&
+                      string.Equals(
+                          StripOuterDoubleQuotes(a),
+                          StripOuterDoubleQuotes(b),
+                          System.StringComparison.Ordinal
+                      );
+        }
+        else
+        {
+            // Original behavior for non-strings
+            valueOk = string.Equals(
+                NormalizeForKind(filled.valueText, filled.kind),
+                NormalizeForKind(q.correctAnswer, expectedKind),
+                System.StringComparison.Ordinal
+            );
+        }
 
         bool ok = kindOk && valueOk;
 
@@ -219,11 +248,9 @@ public class Shrine1Controller : MonoBehaviour
                 Invoke(nameof(EnemyStopHurt), 1.0f);
             }
 
-            // Explanation on correct
             string correctMsg = string.IsNullOrWhiteSpace(q.whyCorrect) ? "Nice!" : q.whyCorrect;
             ShowBubble("Correct!", correctMsg, true);
 
-            // Destroy all other blocks and keep the one in the slot
             DestroyAllLooseBlocksExcept(filled);
 
             if (enemyHp <= 0)
@@ -234,21 +261,17 @@ public class Shrine1Controller : MonoBehaviour
         }
         else
         {
-            wrongAttemptsThisQuestion++; // NEW
+            wrongAttemptsThisQuestion++;
 
             playerHp = Mathf.Max(0, playerHp - 1);
             playerHearts?.SetLives(playerHp);
 
-            if (playerMovement)
-            {
-                playerMovement.isHurt(true);
-                Invoke(nameof(StopHurt), 1.0f);
-            }
+            playerMovement?.HurtOverlay(0.8f);
+
 
             var slot = slots[0];
             if (slot) slot.ClearIfOccupied();
 
-            // Hint on wrong (round-robin if multiple present)
             string hintText = "That block doesn’t fit the blank. Pick another one.";
             if (q.wrongHints != null && q.wrongHints.Length > 0)
             {
@@ -256,7 +279,7 @@ public class Shrine1Controller : MonoBehaviour
                 if (!string.IsNullOrWhiteSpace(q.wrongHints[idx]))
                     hintText = q.wrongHints[idx];
             }
-            ShowBubble("Hint", hintText, false); // stays until next toast
+            ShowBubble("Hint", hintText, false);
 
             if (playerHp <= 0)
             {
@@ -265,6 +288,7 @@ public class Shrine1Controller : MonoBehaviour
             }
         }
     }
+
 
 
     void EnemyStopHurt() { if (enemyAnimator) enemyAnimator.isHurt(false); }
@@ -392,7 +416,9 @@ public class Shrine1Controller : MonoBehaviour
     {
         if (playerMovement) playerMovement.isDead(true);
         questFailedPanel?.SetActive(true);
+        ShowBubble("Game Over", "You ran out of hearts.", false);   
     }
+
 
     void ClearAllLooseBlocks()
     {

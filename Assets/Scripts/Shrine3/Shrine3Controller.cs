@@ -248,6 +248,7 @@ public class Shrine3Controller : MonoBehaviour
         else
         {
             PlayerLoseHearts(q.costHearts);
+            playerMovement?.HurtOverlay(1f);
             ShowFailHint(q);
             if (CheckLose()) return;
             state = S3State.AwaitInput;
@@ -385,23 +386,7 @@ public class Shrine3Controller : MonoBehaviour
         LockRunner();
         state = S3State.Lose;
 
-        if (playerMovement)
-        {
-            var rb = playerMovement.rb;
-            playerMovement.isDead(true);
-
-           
-            if (rb)
-            {
-                rb.velocity = Vector2.zero;
-                rb.angularVelocity = 0f;
-                rb.constraints = RigidbodyConstraints2D.FreezeAll; 
-            }
-        
-             playerMovement.enabled = true;
-
-        }
-
+        if (playerMovement) playerMovement.isDead(true);
         if (_enemyHurtCo != null) { StopCoroutine(_enemyHurtCo); _enemyHurtCo = null; }
         if (enemyAnimator) enemyAnimator.isHurt(false);
         if (questFailedPanel) questFailedPanel.SetActive(true);

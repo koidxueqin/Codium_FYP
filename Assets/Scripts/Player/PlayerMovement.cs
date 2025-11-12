@@ -12,11 +12,23 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Default seconds to keep the 'hurt' animation playing after a wrong answer.")]
     [SerializeField] private float hurtOverlaySecondsDefault = 3f;
 
+    // Clamp to camera settings ---
+    [Header("Screen Clamp")]
+    [SerializeField] private Camera cam;                         // leave empty to use Camera.main
+    [SerializeField] private Vector2 clampPadding = new(0.2f, 0.2f); // world-units padding from edges
+    // ---------------------------------------
+
     private Vector2 moveDirection;
     private Vector2 lastMoveDirection = Vector2.down; // default facing front
 
     // timed overlay state
     private float hurtOverlayUntil = -1f;
+
+    private void Awake()
+    {
+        if (!cam) cam = Camera.main;
+    }
+    // -------------------------------------------
 
     void Update()
     {
@@ -34,6 +46,28 @@ public class PlayerMovement : MonoBehaviour
         // Movement is never blocked
         rb.velocity = moveDirection * moveSpeed;
     }
+
+    // --- ADDED: clamp AFTER all movement & animations for this frame ---
+    private void LateUpdate()
+    {
+        if (!cam || !cam.orthographic) return;
+
+        Vector3 pos = transform.position;
+
+        float vertExtent = cam.orthographicSize;
+        float horzExtent = vertExtent * cam.aspect;
+
+        float minX = cam.transform.position.x - horzExtent + clampPadding.x;
+        float maxX = cam.transform.position.x + horzExtent - clampPadding.x;
+        float minY = cam.transform.position.y - vertExtent + clampPadding.y;
+        float maxY = cam.transform.position.y + vertExtent - clampPadding.y;
+
+        pos.x = Mathf.Clamp(pos.x, minX, maxX);
+        pos.y = Mathf.Clamp(pos.y, minY, maxY);
+
+        transform.position = pos;
+    }
+    // ------------------------------------------------------------------
 
     void ProcessInputs()
     {

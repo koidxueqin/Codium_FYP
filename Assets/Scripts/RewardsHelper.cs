@@ -72,7 +72,6 @@ public static class RewardsHelper
             leveledUp = true;
             int grant = 50 * level;
             bonusCoins += grant;
-            totalCoins += grant;
             nextXp = NextXpAfter(nextXp);
         }
 
